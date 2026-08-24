@@ -16,12 +16,22 @@ class Applicant(Base):
     dob = Column(String, nullable=False)
 
 
+class QuestionCatalog(Base):
+    __tablename__ = "question_catalog"
+
+    question_id = Column(String, primary_key=True, index=True)
+    question_label = Column(String, nullable=False)
+    default_answer = Column(String, nullable=False)
+
+
 class Answer(Base):
     __tablename__ = "answer"
 
     id = Column(Integer, primary_key=True, index=True)
     quote_id = Column(String, ForeignKey("quotes.id"), nullable=False)
-    question_id = Column(String, nullable=False)
+    question_id = Column(
+        String, ForeignKey("question_catalog.question_id"), nullable=False
+    )
     question_label = Column(String, nullable=False)
     answer_value = Column(String, nullable=False)
 
