@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from fastapi import HTTPException, status
-from app.repositories.quote_repository import QuoteRepository
+from app.repositories.quote_json_repository import QuoteRepository
 from app.schemas.quote import QuoteCreate, Status
 
 

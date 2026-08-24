@@ -44,7 +44,7 @@ class QuoteResponse(BaseModel):
     id: str
     status: Status
     product_type: ProductType
-    applicant_id: Applicant
+    applicant: Applicant
     answers: list[Answer]
     premium: Premium | None = None
     policy_id: str | None = None
