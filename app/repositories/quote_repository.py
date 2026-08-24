@@ -25,13 +25,13 @@ class QuoteRepository:
                 "phone": quote.applicant.phone,
                 "date_of_birth": quote.applicant.dob,
             },
-            "answers": [
+            "question_set": [
                 {
-                    "question_id": answer.question_id,
-                    "question_label": answer.question_label,
-                    "answer_value": answer.answer_value,
+                    "question_id": question.question_id,
+                    "question_label": question.question_label,
+                    "answer_value": question.answer_value,
                 }
-                for answer in quote.answers
+                for question in quote.question_set
             ],
             "premium": quote.premium,
             "policy_id": quote.policy_id,
@@ -41,7 +41,7 @@ class QuoteRepository:
 
     def _query(self, db: Session) -> Query:
         return db.query(Quote).options(
-            joinedload(Quote.applicant), joinedload(Quote.answers)
+            joinedload(Quote.applicant), joinedload(Quote.question_set)
         )
 
     def _build_answer_rows(self, db: Session, answers_data: list[dict]) -> list[Answer]:
@@ -98,7 +98,9 @@ class QuoteRepository:
                     policy_id=quote_document["policy_id"],
                     created_at=quote_document["created_at"],
                     updated_at=quote_document["updated_at"],
-                    answers=self._build_answer_rows(db, quote_document["answers"]),
+                    question_set=self._build_answer_rows(
+                        db, quote_document["question_set"]
+                    ),
                 )
                 db.add(quote)
                 db.commit()
@@ -129,9 +131,9 @@ class QuoteRepository:
                     quote.applicant.phone = applicant_data["phone"]
                     quote.applicant.dob = applicant_data["date_of_birth"]
 
-                answers_data = updates.get("answers")
+                answers_data = updates.get("question_set")
                 if answers_data is not None:
-                    quote.answers = self._build_answer_rows(db, answers_data)
+                    quote.question_set = self._build_answer_rows(db, answers_data)
 
                 db.commit()
             except UnknownQuestionIdError:

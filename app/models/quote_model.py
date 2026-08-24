@@ -35,7 +35,7 @@ class Answer(Base):
     question_label = Column(String, nullable=False)
     answer_value = Column(String, nullable=False)
 
-    quote = relationship("Quote", back_populates="answers")
+    quote = relationship("Quote", back_populates="question_set")
 
 
 class Quote(Base):
@@ -51,6 +51,6 @@ class Quote(Base):
     updated_at = Column(String, nullable=False)
 
     applicant = relationship("Applicant", uselist=False)
-    answers = relationship(
+    question_set = relationship(
         "Answer", back_populates="quote", cascade="all, delete-orphan"
     )

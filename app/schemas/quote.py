@@ -12,7 +12,12 @@ class Applicant(BaseModel):
     date_of_birth: date
 
 
-class Answer(BaseModel):
+class QuestionInput(BaseModel):
+    question_id: str
+    answer_value: str
+
+
+class QuestionResponse(BaseModel):
     question_id: str
     question_label: str
     answer_value: str
@@ -37,7 +42,7 @@ class ProductType(Enum):
 class QuoteCreate(BaseModel):
     product_type: ProductType
     applicant: Applicant
-    answers: list[Answer]
+    question_set: list[QuestionInput]
 
 
 class QuoteResponse(BaseModel):
@@ -45,7 +50,7 @@ class QuoteResponse(BaseModel):
     status: Status
     product_type: ProductType
     applicant: Applicant
-    answers: list[Answer]
+    question_set: list[QuestionResponse]
     premium: Premium | None = None
     policy_id: str | None = None
     created_at: datetime

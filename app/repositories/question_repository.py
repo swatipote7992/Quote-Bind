@@ -25,6 +25,15 @@ class QuestionRepository:
             )
             return self._to_document(entry) if entry else None
 
+    def get_by_label(self, label: str) -> dict | None:
+        with SessionLocal() as db:
+            entry = (
+                db.query(QuestionCatalog)
+                .filter(QuestionCatalog.question_label == label)
+                .first()
+            )
+        return self._to_document(entry) if entry else None
+
     def create(self, question_id: str, question_label: str, default_answer: str) -> dict:
         with SessionLocal() as db:
             entry = QuestionCatalog(

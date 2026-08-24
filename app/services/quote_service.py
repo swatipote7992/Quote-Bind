@@ -27,7 +27,7 @@ class QuoteService:
             "status": Status.new.value,
             "product_type": quote.product_type.value,
             "applicant": quote.applicant.model_dump(mode="json"),
-            "answers": [answer.model_dump() for answer in quote.answers],
+            "question_set": [answer.model_dump() for answer in quote.question_set],
             "premium": None,
             "policy_id": None,
             "created_at": now.isoformat(),
