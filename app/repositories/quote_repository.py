@@ -1,7 +1,13 @@
 from sqlalchemy.orm import Query, Session, joinedload
 
 from app.database.database import SessionLocal
-from app.models.quote_model import Answer, Applicant, Quote
+from app.models.quote_model import Answer, Applicant, Quote, QuestionCatalog
+
+
+class UnknownQuestionIdError(Exception):
+    def __init__(self, question_id: str):
+        self.question_id = question_id
+        super().__init__(f"Unknown question_id: {question_id}")
 
 
 class QuoteRepository:
@@ -38,6 +44,26 @@ class QuoteRepository:
             joinedload(Quote.applicant), joinedload(Quote.answers)
         )
 
+    def _build_answer_rows(self, db: Session, answers_data: list[dict]) -> list[Answer]:
+        rows = []
+        for answer in answers_data:
+            question_id = answer["question_id"]
+            catalog_entry = (
+                db.query(QuestionCatalog)
+                .filter(QuestionCatalog.question_id == question_id)
+                .first()
+            )
+            if not catalog_entry:
+                raise UnknownQuestionIdError(question_id)
+            rows.append(
+                Answer(
+                    question_id=question_id,
+                    question_label=catalog_entry.question_label,
+                    answer_value=answer["answer_value"],
+                )
+            )
+        return rows
+
     def get_quotes(self) -> list[dict]:
         with SessionLocal() as db:
             quotes = self._query(db).all()
@@ -50,38 +76,35 @@ class QuoteRepository:
 
     def save_quote(self, quote_document: dict) -> dict:
         with SessionLocal() as db:
-            applicant_data = quote_document["applicant"]
-            applicant = Applicant(
-                applicant_ref_id=applicant_data["applicant_id"],
-                first_name=applicant_data["first_name"],
-                last_name=applicant_data["last_name"],
-                email=applicant_data["email"],
-                phone=applicant_data["phone"],
-                dob=applicant_data["date_of_birth"],
-            )
-            db.add(applicant)
-            db.flush()
+            try:
+                applicant_data = quote_document["applicant"]
+                applicant = Applicant(
+                    applicant_ref_id=applicant_data["applicant_id"],
+                    first_name=applicant_data["first_name"],
+                    last_name=applicant_data["last_name"],
+                    email=applicant_data["email"],
+                    phone=applicant_data["phone"],
+                    dob=applicant_data["date_of_birth"],
+                )
+                db.add(applicant)
+                db.flush()
 
-            quote = Quote(
-                id=quote_document["id"],
-                status=quote_document["status"],
-                product_type=quote_document["product_type"],
-                applicant_id=applicant.id,
-                premium=quote_document["premium"],
-                policy_id=quote_document["policy_id"],
-                created_at=quote_document["created_at"],
-                updated_at=quote_document["updated_at"],
-                answers=[
-                    Answer(
-                        question_id=answer["question_id"],
-                        question_label=answer["question_label"],
-                        answer_value=answer["answer_value"],
-                    )
-                    for answer in quote_document["answers"]
-                ],
-            )
-            db.add(quote)
-            db.commit()
+                quote = Quote(
+                    id=quote_document["id"],
+                    status=quote_document["status"],
+                    product_type=quote_document["product_type"],
+                    applicant_id=applicant.id,
+                    premium=quote_document["premium"],
+                    policy_id=quote_document["policy_id"],
+                    created_at=quote_document["created_at"],
+                    updated_at=quote_document["updated_at"],
+                    answers=self._build_answer_rows(db, quote_document["answers"]),
+                )
+                db.add(quote)
+                db.commit()
+            except UnknownQuestionIdError:
+                db.rollback()
+                raise
 
             return self._to_document(
                 self._query(db).filter(Quote.id == quote.id).first()
@@ -93,30 +116,27 @@ class QuoteRepository:
             if not quote:
                 return None
 
-            if "product_type" in updates:
-                quote.product_type = updates["product_type"]
+            try:
+                if "product_type" in updates:
+                    quote.product_type = updates["product_type"]
 
-            applicant_data = updates.get("applicant")
-            if applicant_data:
-                quote.applicant.applicant_ref_id = applicant_data["applicant_id"]
-                quote.applicant.first_name = applicant_data["first_name"]
-                quote.applicant.last_name = applicant_data["last_name"]
-                quote.applicant.email = applicant_data["email"]
-                quote.applicant.phone = applicant_data["phone"]
-                quote.applicant.dob = applicant_data["date_of_birth"]
+                applicant_data = updates.get("applicant")
+                if applicant_data:
+                    quote.applicant.applicant_ref_id = applicant_data["applicant_id"]
+                    quote.applicant.first_name = applicant_data["first_name"]
+                    quote.applicant.last_name = applicant_data["last_name"]
+                    quote.applicant.email = applicant_data["email"]
+                    quote.applicant.phone = applicant_data["phone"]
+                    quote.applicant.dob = applicant_data["date_of_birth"]
 
-            answers_data = updates.get("answers")
-            if answers_data is not None:
-                quote.answers = [
-                    Answer(
-                        question_id=answer["question_id"],
-                        question_label=answer["question_label"],
-                        answer_value=answer["answer_value"],
-                    )
-                    for answer in answers_data
-                ]
+                answers_data = updates.get("answers")
+                if answers_data is not None:
+                    quote.answers = self._build_answer_rows(db, answers_data)
 
-            db.commit()
+                db.commit()
+            except UnknownQuestionIdError:
+                db.rollback()
+                raise
 
             return self._to_document(
                 self._query(db).filter(Quote.id == quote_id).first()
