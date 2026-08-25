@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, JSON, String
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, JSON, String, Table
 from sqlalchemy.orm import relationship
 
 from app.database.database import Base
@@ -23,6 +23,8 @@ class ProductCatalog(Base):
     product_label = Column(String, nullable=False)
     is_active = Column(Boolean, nullable=False)
 
+    question_set = relationship("QuestionSet", back_populates="product", uselist=False)
+
 
 class QuestionCatalog(Base):
     __tablename__ = "question_catalog"
@@ -30,6 +32,32 @@ class QuestionCatalog(Base):
     question_id = Column(String, primary_key=True, index=True)
     question_label = Column(String, nullable=False)
     default_answer = Column(String, nullable=False)
+
+
+question_array = Table(
+    "question_array",
+    Base.metadata,
+    Column("question_set_id", String, ForeignKey("question_set.id"), primary_key=True),
+    Column(
+        "question_id",
+        String,
+        ForeignKey("question_catalog.question_id"),
+        primary_key=True,
+    ),
+)
+
+
+class QuestionSet(Base):
+    __tablename__ = "question_set"
+
+    id = Column(String, primary_key=True, index=True)
+    label = Column(String, nullable=False)
+    product_id = Column(
+        String, ForeignKey("product_catalog.product_id"), nullable=False, unique=True
+    )
+
+    product = relationship("ProductCatalog", back_populates="question_set")
+    questions = relationship("QuestionCatalog", secondary=question_array)
 
 
 class Answer(Base):
