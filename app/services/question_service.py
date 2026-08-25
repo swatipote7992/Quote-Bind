@@ -25,7 +25,7 @@ class QuestionService:
         return question
 
     def create_question(self, question: QuestionCatalogCreate):
-        existing_questions = self.question_repository.get_all()
+        existing_questions = self.get_questions()
         duplicate_question = self.get_by_label(question.question_label)
         if not duplicate_question:
             question_id = f"AC{len(existing_questions) + 1:03d}"
