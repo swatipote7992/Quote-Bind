@@ -3,7 +3,7 @@ from fastapi import APIRouter, status
 from app.schemas.question_catalog import QuestionCatalogCreate, QuestionCatalogResponse
 from app.services.question_service import QuestionService
 
-router = APIRouter(prefix="/answers", tags=["Answers"])
+router = APIRouter(prefix="/questions", tags=["Questions"])
 
 
 @router.get("/", response_model=list[QuestionCatalogResponse])
