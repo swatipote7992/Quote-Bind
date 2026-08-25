@@ -1,4 +1,4 @@
-from sqlalchemy import Column, ForeignKey, Integer, JSON, String
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, JSON, String
 from sqlalchemy.orm import relationship
 
 from app.database.database import Base
@@ -14,6 +14,14 @@ class Applicant(Base):
     email = Column(String, nullable=False)
     phone = Column(String, nullable=False)
     dob = Column(String, nullable=False)
+
+
+class ProductCatalog(Base):
+    __tablename__ = "product_catalog"
+
+    product_id = Column(String, primary_key=True, index=True)
+    product_label = Column(String, nullable=False)
+    is_active = Column(Boolean, nullable=False)
 
 
 class QuestionCatalog(Base):
