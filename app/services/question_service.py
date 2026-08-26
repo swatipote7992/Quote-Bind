@@ -12,7 +12,7 @@ class QuestionService:
     def get_questions(self):
         return self.question_repository.get_all()
 
-    def get_by_id(self, question_id: str):
+    def get_by_id(self, question_id: int):
         question = self.question_repository.get_by_id(question_id)
         if not question:
             raise HTTPException(
@@ -25,12 +25,10 @@ class QuestionService:
         return question
 
     def create_question(self, question: QuestionCatalogCreate):
-        existing_questions = self.get_questions()
         duplicate_question = self.get_by_label(question.question_label)
         if not duplicate_question:
-            question_id = f"AC{len(existing_questions) + 1:03d}"
             return self.question_repository.create(
-                question_id, question.question_label, question.default_questions
+                question.question_label, question.default_answer
             )
         else:
             raise HTTPException(
@@ -38,7 +36,7 @@ class QuestionService:
                 detail="This question already exists",
             )
 
-    def update_question(self, question_id: str, questions: QuestionCatalogCreate):
+    def update_question(self, question_id: int, questions: QuestionCatalogCreate):
         updated_questions = self.question_repository.update(
             question_id, questions.model_dump()
         )
@@ -48,7 +46,7 @@ class QuestionService:
             )
         return updated_questions
 
-    def delete_question(self, question_id: str) -> None:
+    def delete_question(self, question_id: int) -> None:
         try:
             deleted = self.question_repository.delete(question_id)
         except IntegrityError as exc:
