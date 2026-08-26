@@ -46,7 +46,7 @@ class QuestionSet(Base):
 
     product = relationship("ProductCatalog", back_populates="question_set")
     questions = relationship(
-        "QuestionSetQuestion",
+        "QuestionSetArray",
         back_populates="question_set",
         cascade="all, delete-orphan",
     )
