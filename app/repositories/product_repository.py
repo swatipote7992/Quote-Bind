@@ -16,7 +16,7 @@ class ProductRepository:
             entries = db.query(ProductCatalog).all()
             return [self._to_document(entry) for entry in entries]
 
-    def get_by_id(self, product_id: str) -> dict | None:
+    def get_by_id(self, product_id: int) -> dict | None:
         with SessionLocal() as db:
             entry = (
                 db.query(ProductCatalog)
@@ -34,10 +34,9 @@ class ProductRepository:
             )
             return self._to_document(entry) if entry else None
 
-    def create(self, product_id: str, product_label: str, isActive: bool) -> dict:
+    def create(self, product_label: str, isActive: bool) -> dict:
         with SessionLocal() as db:
             entry = ProductCatalog(
-                product_id=product_id,
                 product_label=product_label,
                 is_active=isActive,
             )
@@ -46,7 +45,7 @@ class ProductRepository:
             db.refresh(entry)
             return self._to_document(entry)
 
-    def update(self, product_id: str, updates: dict) -> dict | None:
+    def update(self, product_id: int, updates: dict) -> dict | None:
         with SessionLocal() as db:
             entry = (
                         db.query(ProductCatalog)
@@ -66,7 +65,7 @@ class ProductRepository:
             db.refresh(entry)
             return self._to_document(entry)
 
-    def delete(self, product_id: str) -> bool:
+    def delete(self, product_id: int) -> bool:
         with SessionLocal() as db:
             entry = db.query(ProductCatalog).filter(ProductCatalog.product_id == product_id).first()
             if not entry:

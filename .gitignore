@@ -9,4 +9,5 @@ app/repositories/__pycache__/quote_repository.cpython-313.pyc
 app/models/__pycache__/quote_model.cpython-313.pyc
 app/database/__pycache__/database.cpython-313.pyc
 app/api/routes/__pycache__/quotes_router.cpython-313.pyc
+.env.local
 

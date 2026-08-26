@@ -6,6 +6,6 @@ class ProductCatalogCreate(BaseModel):
     isActive: bool = True
 
 class ProductCatalogResponse(BaseModel):
-    product_id: str
+    product_id: int
     product_label: str
     isActive: bool
