@@ -12,7 +12,7 @@ async def get_products():
 
 
 @router.get("/{product_id}", response_model=ProductCatalogResponse)
-async def get_by_id(product_id: str):
+async def get_by_id(product_id: int):
     return ProductService().get_by_id(product_id)
 
 
@@ -22,10 +22,10 @@ async def create_product(product: ProductCatalogCreate):
 
 
 @router.put("/{product_id}", response_model=ProductCatalogResponse)
-async def update_product(product_id: str, product: ProductCatalogCreate):
+async def update_product(product_id: int, product: ProductCatalogCreate):
     return ProductService().update_product(product_id, product)
 
 
 @router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_product(product_id: str):
+async def delete_product(product_id: int):
     ProductService().delete_product(product_id)

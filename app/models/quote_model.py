@@ -7,7 +7,7 @@ from app.database.database import Base
 class ProductCatalog(Base):
     __tablename__ = "product_catalog"
 
-    product_id = Column(String, primary_key=True, index=True)
+    product_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     product_label = Column(String, nullable=False)
     is_active = Column(Boolean, nullable=False)
 
@@ -41,7 +41,7 @@ class QuestionSet(Base):
     id = Column(String, primary_key=True, index=True)
     label = Column(String, nullable=False)
     product_id = Column(
-        String, ForeignKey("product_catalog.product_id"), nullable=False, unique=True
+        Integer, ForeignKey("product_catalog.product_id"), nullable=False, unique=True
     )
 
     product = relationship("ProductCatalog", back_populates="question_set")
@@ -63,7 +63,7 @@ class Quote(Base):
 
     id = Column(String, primary_key=True, index=True)
     status = Column(String, nullable=False)
-    product_id = Column(String, ForeignKey("product_catalog.product_id"), nullable=False)
+    product_id = Column(Integer, ForeignKey("product_catalog.product_id"), nullable=False)
     applicant_id = Column(Integer, ForeignKey("applicant.id"), nullable=False)
     premium = Column(JSON, nullable=True)
     policy_id = Column(String, nullable=True)

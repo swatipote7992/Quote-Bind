@@ -5,7 +5,7 @@ from app.models.quote_model import Applicant, ProductCatalog, Quote, QuestionSet
 
 
 class UnknownProductIdError(Exception):
-    def __init__(self, product_id: str):
+    def __init__(self, product_id: int):
         self.product_id = product_id
         super().__init__(f"Unknown product_id: {product_id}")
 
@@ -46,7 +46,7 @@ class QuoteRepository:
             .joinedload(QuestionSet.questions_set),
         )
 
-    def _ensure_product_exists(self, db: Session, product_id: str) -> None:
+    def _ensure_product_exists(self, db: Session, product_id: int) -> None:
         exists = (
             db.query(ProductCatalog)
             .filter(ProductCatalog.product_id == product_id)
