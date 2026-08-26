@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from fastapi import HTTPException, status
-from app.repositories.quote_repository import QuoteRepository, UnknownQuestionIdError
+from app.repositories.quote_repository import QuoteRepository, UnknownProductIdError
 from app.schemas.quote import QuoteCreate, Status
 
 
@@ -25,9 +25,8 @@ class QuoteService:
         quote_document = {
             "id": f"Q{len(existing_quotes) + 1:03d}",
             "status": Status.new.value,
-            "product_type": quote.product_type.value,
+            "product_id": quote.product_id,
             "applicant": quote.applicant.model_dump(mode="json"),
-            "question_set": [answer.model_dump() for answer in quote.question_set],
             "premium": None,
             "policy_id": None,
             "created_at": now.isoformat(),
@@ -36,10 +35,10 @@ class QuoteService:
 
         try:
             return self.quote_repository.save_quote(quote_document)
-        except UnknownQuestionIdError as exc:
+        except UnknownProductIdError as exc:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Unknown question_id: {exc.question_id}",
+                detail=f"Unknown product_id: {exc.product_id}",
             ) from exc
 
     def update_quote(self, quote_id: str, quote: QuoteCreate):
@@ -47,10 +46,10 @@ class QuoteService:
             updated_quote = self.quote_repository.update_quote(
                 quote_id, quote.model_dump(mode="json")
             )
-        except UnknownQuestionIdError as exc:
+        except UnknownProductIdError as exc:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Unknown question_id: {exc.question_id}",
+                detail=f"Unknown product_id: {exc.product_id}",
             ) from exc
         if not updated_quote:
             raise HTTPException(

@@ -1,19 +1,7 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, JSON, String, Table
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, JSON, String
 from sqlalchemy.orm import relationship
 
 from app.database.database import Base
-
-
-class Applicant(Base):
-    __tablename__ = "applicant"
-
-    id = Column(Integer, primary_key=True, index=True)
-    applicant_ref_id = Column(Integer, nullable=False)
-    first_name = Column(String, nullable=False)
-    last_name = Column(String, nullable=False)
-    email = Column(String, nullable=False)
-    phone = Column(String, nullable=False)
-    dob = Column(String, nullable=False)
 
 
 class ProductCatalog(Base):
@@ -34,17 +22,17 @@ class QuestionCatalog(Base):
     default_answer = Column(String, nullable=False)
 
 
-question_array = Table(
-    "question_array",
-    Base.metadata,
-    Column("question_set_id", String, ForeignKey("question_set.id"), primary_key=True),
-    Column(
-        "question_id",
-        String,
-        ForeignKey("question_catalog.question_id"),
-        primary_key=True,
-    ),
-)
+class QuestionSetArray(Base):
+    __tablename__ = "question_array"
+
+    question_set_id = Column(String, ForeignKey("question_set.id"), primary_key=True)
+    question_id = Column(
+        String, ForeignKey("question_catalog.question_id"), primary_key=True
+    )
+    answer_value = Column(String, nullable=True)
+
+    question_set = relationship("QuestionSet", back_populates="questions")
+    question = relationship("QuestionCatalog")
 
 
 class QuestionSet(Base):
@@ -57,29 +45,29 @@ class QuestionSet(Base):
     )
 
     product = relationship("ProductCatalog", back_populates="question_set")
-    questions = relationship("QuestionCatalog", secondary=question_array)
+    questions = relationship(
+        "QuestionSetQuestion",
+        back_populates="question_set",
+        cascade="all, delete-orphan",
+    )
 
-
-class Answer(Base):
-    __tablename__ = "answer"
+class Applicant(Base):
+    __tablename__ = "applicant"
 
     id = Column(Integer, primary_key=True, index=True)
-    quote_id = Column(String, ForeignKey("quotes.id"), nullable=False)
-    question_id = Column(
-        String, ForeignKey("question_catalog.question_id"), nullable=False
-    )
-    question_label = Column(String, nullable=False)
-    answer_value = Column(String, nullable=False)
-
-    quote = relationship("Quote", back_populates="question_set")
-
+    applicant_ref_id = Column(Integer, nullable=False)
+    first_name = Column(String, nullable=False)
+    last_name = Column(String, nullable=False)
+    email = Column(String, nullable=False)
+    phone = Column(String, nullable=False)
+    dob = Column(String, nullable=False)
 
 class Quote(Base):
     __tablename__ = "quotes"
 
     id = Column(String, primary_key=True, index=True)
     status = Column(String, nullable=False)
-    product_type = Column(String, nullable=False)
+    product_id = Column(String, ForeignKey("product_catalog.product_id"), nullable=False)
     applicant_id = Column(Integer, ForeignKey("applicant.id"), nullable=False)
     premium = Column(JSON, nullable=True)
     policy_id = Column(String, nullable=True)
@@ -87,6 +75,4 @@ class Quote(Base):
     updated_at = Column(String, nullable=False)
 
     applicant = relationship("Applicant", uselist=False)
-    question_set = relationship(
-        "Answer", back_populates="quote", cascade="all, delete-orphan"
-    )
+    product = relationship("ProductCatalog")
