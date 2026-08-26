@@ -29,14 +29,14 @@ class Status(Enum):
     rejected = "Rejected"
 
 class QuoteCreate(BaseModel):
-    product_id: str
+    product_id: int
     applicant: Applicant
 
 
 class QuoteResponse(BaseModel):
     id: str
     status: Status
-    product_id: str
+    product_id: int
     applicant: Applicant
     question_set: list[QuestionResponse]
     premium: Premium | None = None
