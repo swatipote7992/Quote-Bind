@@ -41,6 +41,7 @@ class QuestionRepository:
                 default_answer=default_answer,
             )
             db.add(entry)
+            # db.flush()  # We can use Flush to get the generated question_id
             db.commit()
             db.refresh(entry)
             return self._to_document(entry)
