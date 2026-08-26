@@ -16,11 +16,6 @@ class QuestionResponse(BaseModel):
     question_id: int
     question_label: str
 
-class Premium(BaseModel):
-    amount: float
-    currency: str
-    calculated_at: datetime
-
 class Status(Enum):
     new = "New"
     inprogress = "InProgress"
@@ -39,7 +34,5 @@ class QuoteResponse(BaseModel):
     product_id: int
     applicant: Applicant
     question_set: list[QuestionResponse]
-    premium: Premium | None = None
-    policy_id: str | None = None
     created_at: datetime
     updated_at: datetime
