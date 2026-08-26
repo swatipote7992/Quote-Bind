@@ -7,7 +7,7 @@ router = APIRouter(prefix="/questions", tags=["Questions"])
 
 
 @router.get("/", response_model=list[QuestionCatalogResponse])
-async def get_answers():
+async def get_questions():
     return QuestionService().get_questions()
 
 
@@ -27,5 +27,5 @@ async def update_question(question_id: str, question: QuestionCatalogCreate):
 
 
 @router.delete("/{question_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_answer(question_id: str):
+async def delete_question(question_id: str):
     QuestionService().delete_question(question_id)

@@ -30,7 +30,7 @@ class QuestionService:
         if not duplicate_question:
             question_id = f"AC{len(existing_questions) + 1:03d}"
             return self.question_repository.create(
-                question_id, question.question_label, question.default_questions
+                question_id, question.question_label, question.default_answer
             )
         else:
             raise HTTPException(
