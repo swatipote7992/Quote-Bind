@@ -32,8 +32,6 @@ class QuoteRepository:
                 }
                 for question in quote.product.question_set.questions_set
             ],
-            "premium": quote.premium,
-            "policy_id": quote.policy_id,
             "created_at": quote.created_at,
             "updated_at": quote.updated_at,
         }
@@ -87,8 +85,6 @@ class QuoteRepository:
                     status=quote_document["status"],
                     product_id=quote_document["product_id"],
                     applicant_id=applicant.id,
-                    premium=quote_document["premium"],
-                    policy_id=quote_document["policy_id"],
                     created_at=quote_document["created_at"],
                     updated_at=quote_document["updated_at"],
                 )

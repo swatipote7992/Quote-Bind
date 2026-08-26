@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, JSON, String, Table
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Table
 from sqlalchemy.orm import relationship
 
 from app.database.database import Base
@@ -65,8 +65,6 @@ class Quote(Base):
     status = Column(String, nullable=False)
     product_id = Column(Integer, ForeignKey("product_catalog.product_id"), nullable=False)
     applicant_id = Column(Integer, ForeignKey("applicant.id"), nullable=False)
-    premium = Column(JSON, nullable=True)
-    policy_id = Column(String, nullable=True)
     created_at = Column(String, nullable=False)
     updated_at = Column(String, nullable=False)
 
