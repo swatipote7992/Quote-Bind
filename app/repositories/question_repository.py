@@ -16,7 +16,7 @@ class QuestionRepository:
             entries = db.query(QuestionCatalog).all()
             return [self._to_document(entry) for entry in entries]
 
-    def get_by_id(self, question_id: str) -> dict | None:
+    def get_by_id(self, question_id: int) -> dict | None:
         with SessionLocal() as db:
             entry = (
                 db.query(QuestionCatalog)
@@ -34,10 +34,9 @@ class QuestionRepository:
             )
         return self._to_document(entry) if entry else None
 
-    def create(self, question_id: str, question_label: str, default_answer: str) -> dict:
+    def create(self, question_label: str, default_answer: str) -> dict:
         with SessionLocal() as db:
             entry = QuestionCatalog(
-                question_id=question_id,
                 question_label=question_label,
                 default_answer=default_answer,
             )
@@ -46,7 +45,7 @@ class QuestionRepository:
             db.refresh(entry)
             return self._to_document(entry)
 
-    def update(self, question_id: str, updates: dict) -> dict | None:
+    def update(self, question_id: int, updates: dict) -> dict | None:
         with SessionLocal() as db:
             entry = (
                 db.query(QuestionCatalog)
@@ -65,7 +64,7 @@ class QuestionRepository:
             db.refresh(entry)
             return self._to_document(entry)
 
-    def delete(self, question_id: str) -> bool:
+    def delete(self, question_id: int) -> bool:
         with SessionLocal() as db:
             entry = (
                 db.query(QuestionCatalog)

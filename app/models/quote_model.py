@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, JSON, String
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, JSON, String, Table
 from sqlalchemy.orm import relationship
 
 from app.database.database import Base
@@ -17,22 +17,22 @@ class ProductCatalog(Base):
 class QuestionCatalog(Base):
     __tablename__ = "question_catalog"
 
-    question_id = Column(String, primary_key=True, index=True)
+    question_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     question_label = Column(String, nullable=False)
     default_answer = Column(String, nullable=False)
 
 
-class QuestionSetArray(Base):
-    __tablename__ = "question_array"
-
-    question_set_id = Column(String, ForeignKey("question_set.id"), primary_key=True)
-    question_id = Column(
-        String, ForeignKey("question_catalog.question_id"), primary_key=True
-    )
-    answer_value = Column(String, nullable=True)
-
-    question_set = relationship("QuestionSet", back_populates="questions")
-    question = relationship("QuestionCatalog")
+question_array = Table(
+    "question_array",
+    Base.metadata,
+    Column("question_set_id", String, ForeignKey("question_set.id"), primary_key=True),
+    Column(
+        "question_id",
+        Integer,
+        ForeignKey("question_catalog.question_id"),
+        primary_key=True,
+    ),
+)
 
 
 class QuestionSet(Base):
@@ -45,11 +45,7 @@ class QuestionSet(Base):
     )
 
     product = relationship("ProductCatalog", back_populates="question_set")
-    questions = relationship(
-        "QuestionSetArray",
-        back_populates="question_set",
-        cascade="all, delete-orphan",
-    )
+    questions_set = relationship("QuestionCatalog", secondary=question_array)
 
 class Applicant(Base):
     __tablename__ = "applicant"

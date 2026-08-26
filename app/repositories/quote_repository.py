@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Query, Session, joinedload
 
 from app.database.database import SessionLocal
-from app.models.quote_model import Applicant, ProductCatalog, Quote, QuestionSet, QuestionSetQuestion
+from app.models.quote_model import Applicant, ProductCatalog, Quote, QuestionSet
 
 
 class UnknownProductIdError(Exception):
@@ -27,11 +27,10 @@ class QuoteRepository:
             },
             "question_set": [
                 {
-                    "question_id": entry.question.question_id,
-                    "question_label": entry.question.question_label,
-                    "answer_value": entry.answer_value,
+                    "question_id": question.question_id,
+                    "question_label": question.question_label,
                 }
-                for entry in quote.product.question_set.questions
+                for question in quote.product.question_set.questions_set
             ],
             "premium": quote.premium,
             "policy_id": quote.policy_id,
@@ -44,8 +43,7 @@ class QuoteRepository:
             joinedload(Quote.applicant),
             joinedload(Quote.product)
             .joinedload(ProductCatalog.question_set)
-            .joinedload(QuestionSet.questions)
-            .joinedload(QuestionSetQuestion.question),
+            .joinedload(QuestionSet.questions_set),
         )
 
     def _ensure_product_exists(self, db: Session, product_id: str) -> None:
