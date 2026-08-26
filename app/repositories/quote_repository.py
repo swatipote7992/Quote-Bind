@@ -1,13 +1,13 @@
 from sqlalchemy.orm import Query, Session, joinedload
 
 from app.database.database import SessionLocal
-from app.models.quote_model import Answer, Applicant, Quote, QuestionCatalog
+from app.models.quote_model import Applicant, ProductCatalog, Quote, QuestionSet
 
 
-class UnknownQuestionIdError(Exception):
-    def __init__(self, question_id: str):
-        self.question_id = question_id
-        super().__init__(f"Unknown question_id: {question_id}")
+class UnknownProductIdError(Exception):
+    def __init__(self, product_id: int):
+        self.product_id = product_id
+        super().__init__(f"Unknown product_id: {product_id}")
 
 
 class QuoteRepository:
@@ -16,7 +16,7 @@ class QuoteRepository:
         return {
             "id": quote.id,
             "status": quote.status,
-            "product_type": quote.product_type,
+            "product_id": quote.product_id,
             "applicant": {
                 "applicant_id": quote.applicant.applicant_ref_id,
                 "first_name": quote.applicant.first_name,
@@ -29,40 +29,29 @@ class QuoteRepository:
                 {
                     "question_id": question.question_id,
                     "question_label": question.question_label,
-                    "answer_value": question.answer_value,
                 }
-                for question in quote.question_set
+                for question in quote.product.question_set.questions_set
             ],
-            "premium": quote.premium,
-            "policy_id": quote.policy_id,
             "created_at": quote.created_at,
             "updated_at": quote.updated_at,
         }
 
     def _query(self, db: Session) -> Query:
         return db.query(Quote).options(
-            joinedload(Quote.applicant), joinedload(Quote.question_set)
+            joinedload(Quote.applicant),
+            joinedload(Quote.product)
+            .joinedload(ProductCatalog.question_set)
+            .joinedload(QuestionSet.questions_set),
         )
 
-    def _build_answer_rows(self, db: Session, answers_data: list[dict]) -> list[Answer]:
-        rows = []
-        for answer in answers_data:
-            question_id = answer["question_id"]
-            catalog_entry = (
-                db.query(QuestionCatalog)
-                .filter(QuestionCatalog.question_id == question_id)
-                .first()
-            )
-            if not catalog_entry:
-                raise UnknownQuestionIdError(question_id)
-            rows.append(
-                Answer(
-                    question_id=question_id,
-                    question_label=catalog_entry.question_label,
-                    answer_value=answer["answer_value"],
-                )
-            )
-        return rows
+    def _ensure_product_exists(self, db: Session, product_id: int) -> None:
+        exists = (
+            db.query(ProductCatalog)
+            .filter(ProductCatalog.product_id == product_id)
+            .first()
+        )
+        if not exists:
+            raise UnknownProductIdError(product_id)
 
     def get_quotes(self) -> list[dict]:
         with SessionLocal() as db:
@@ -77,6 +66,8 @@ class QuoteRepository:
     def save_quote(self, quote_document: dict) -> dict:
         with SessionLocal() as db:
             try:
+                self._ensure_product_exists(db, quote_document["product_id"])
+
                 applicant_data = quote_document["applicant"]
                 applicant = Applicant(
                     applicant_ref_id=applicant_data["applicant_id"],
@@ -92,19 +83,14 @@ class QuoteRepository:
                 quote = Quote(
                     id=quote_document["id"],
                     status=quote_document["status"],
-                    product_type=quote_document["product_type"],
+                    product_id=quote_document["product_id"],
                     applicant_id=applicant.id,
-                    premium=quote_document["premium"],
-                    policy_id=quote_document["policy_id"],
                     created_at=quote_document["created_at"],
                     updated_at=quote_document["updated_at"],
-                    question_set=self._build_answer_rows(
-                        db, quote_document["question_set"]
-                    ),
                 )
                 db.add(quote)
                 db.commit()
-            except UnknownQuestionIdError:
+            except UnknownProductIdError:
                 db.rollback()
                 raise
 
@@ -119,8 +105,9 @@ class QuoteRepository:
                 return None
 
             try:
-                if "product_type" in updates:
-                    quote.product_type = updates["product_type"]
+                if "product_id" in updates:
+                    self._ensure_product_exists(db, updates["product_id"])
+                    quote.product_id = updates["product_id"]
 
                 applicant_data = updates.get("applicant")
                 if applicant_data:
@@ -131,12 +118,8 @@ class QuoteRepository:
                     quote.applicant.phone = applicant_data["phone"]
                     quote.applicant.dob = applicant_data["date_of_birth"]
 
-                answers_data = updates.get("question_set")
-                if answers_data is not None:
-                    quote.question_set = self._build_answer_rows(db, answers_data)
-
                 db.commit()
-            except UnknownQuestionIdError:
+            except UnknownProductIdError:
                 db.rollback()
                 raise
 
@@ -162,7 +145,9 @@ class QuoteRepository:
         with SessionLocal() as db:
             query = self._query(db)
             if category:
-                query = query.filter(Quote.product_type.ilike(category))
+                query = query.join(Quote.product).filter(
+                    ProductCatalog.product_label.ilike(category)
+                )
             quotes = query.all()
 
             if name:
