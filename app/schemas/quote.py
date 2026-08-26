@@ -13,9 +13,8 @@ class Applicant(BaseModel):
 
 
 class QuestionResponse(BaseModel):
-    question_id: str
+    question_id: int
     question_label: str
-    answer_value: str | None = None
 
 class Premium(BaseModel):
     amount: float
