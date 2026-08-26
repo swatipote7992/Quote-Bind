@@ -7,6 +7,6 @@ class QuestionCatalogCreate(BaseModel):
 
 
 class QuestionCatalogResponse(BaseModel):
-    question_id: str
+    question_id: int
     question_label: str
     default_answer: str

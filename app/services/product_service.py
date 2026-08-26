@@ -11,7 +11,7 @@ class ProductService:
     def get_products(self):
         return self.product_repository.get_all()
 
-    def get_by_id(self, product_id: str):
+    def get_by_id(self, product_id: int):
         product = self.product_repository.get_by_id(product_id)
         if not product:
             raise HTTPException(
@@ -30,10 +30,8 @@ class ProductService:
     def create_product(self, product: ProductCatalogCreate):
         duplicate_product = self.product_repository.get_by_label(product.product_label)
         if not duplicate_product:
-            existing_products= self.get_products()
-            product_id = f"PR{len(existing_products) + 1:03d}"
             new_product = self.product_repository.create(
-            product_id, product.product_label, product.isActive)
+                product.product_label, product.isActive)
             return new_product
         else:
             raise HTTPException(
@@ -41,7 +39,7 @@ class ProductService:
                 detail = "This Product already exist"
             )
 
-    def update_product(self, product_id: str, product: ProductCatalogCreate):
+    def update_product(self, product_id: int, product: ProductCatalogCreate):
         updated_product = self.product_repository.update(
             product_id, product.model_dump()
         )
@@ -51,7 +49,7 @@ class ProductService:
             )
         return updated_product
 
-    def delete_product(self, product_id: str) -> None:
+    def delete_product(self, product_id: int) -> None:
         try:
             deleted = self.product_repository.delete(product_id)
         except IntegrityError as exc:

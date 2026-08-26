@@ -12,20 +12,9 @@ class Applicant(BaseModel):
     date_of_birth: date
 
 
-class QuestionInput(BaseModel):
-    question_id: str
-    answer_value: str
-
-
 class QuestionResponse(BaseModel):
-    question_id: str
+    question_id: int
     question_label: str
-    answer_value: str
-
-class Premium(BaseModel):
-    amount: float
-    currency: str
-    calculated_at: datetime
 
 class Status(Enum):
     new = "New"
@@ -34,24 +23,16 @@ class Status(Enum):
     approved = "Approved"
     rejected = "Rejected"
 
-class ProductType(Enum):
-    audi = "Audi"
-    bmw = "BMW"
-    mercedes = "Mercedes"
-
 class QuoteCreate(BaseModel):
-    product_type: ProductType
+    product_id: int
     applicant: Applicant
-    question_set: list[QuestionInput]
 
 
 class QuoteResponse(BaseModel):
     id: str
     status: Status
-    product_type: ProductType
+    product_id: int
     applicant: Applicant
     question_set: list[QuestionResponse]
-    premium: Premium | None = None
-    policy_id: str | None = None
     created_at: datetime
     updated_at: datetime

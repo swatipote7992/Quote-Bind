@@ -7,12 +7,12 @@ router = APIRouter(prefix="/questions", tags=["Questions"])
 
 
 @router.get("/", response_model=list[QuestionCatalogResponse])
-async def get_answers():
+async def get_questions():
     return QuestionService().get_questions()
 
 
 @router.get("/{question_id}", response_model=QuestionCatalogResponse)
-async def get_by_id(question_id: str):
+async def get_by_id(question_id: int):
     return QuestionService().get_by_id(question_id)
 
 
@@ -22,10 +22,10 @@ async def create_question(question: QuestionCatalogCreate):
 
 
 @router.put("/{question_id}", response_model=QuestionCatalogResponse)
-async def update_question(question_id: str, question: QuestionCatalogCreate):
+async def update_question(question_id: int, question: QuestionCatalogCreate):
     return QuestionService().update_question(question_id, question)
 
 
 @router.delete("/{question_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_answer(question_id: str):
+async def delete_question(question_id: int):
     QuestionService().delete_question(question_id)
