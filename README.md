@@ -64,19 +64,19 @@ CREATE DATABASE "QuoteBindAdmin";
 ```
 
 The connection string is read from the `DATABASE_URL` environment variable
-(via a `.env` file, loaded with `python-dotenv`). Copy the example file and
-fill in your own credentials:
+(via a `.env.local` file, loaded with `python-dotenv`). Copy the example
+file and fill in your own credentials:
 
 ```bash
-cp .env.example .env
+cp .env.local.example .env.local
 ```
 
 ```
 DATABASE_URL=postgresql://<user>:<password>@<host>:<port>/QuoteBindAdmin
 ```
 
-`.env` is gitignored, so your credentials never get committed — only
-`.env.example` (with placeholder values) is tracked in the repo.
+`.env.local` is gitignored, so your credentials never get committed — only
+`.env.local.example` (with placeholder values) is tracked in the repo.
 
 Tables are created automatically the first time the app starts
 (`Base.metadata.create_all(bind=engine)` in `main.py`), so no separate
