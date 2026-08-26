@@ -1,7 +1,12 @@
+import os
+
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-URL_DATABASE = 'postgresql://postgres:techlearn@localhost:5432/QuoteBindAdmin'
+load_dotenv()
+
+URL_DATABASE = os.environ["DATABASE_URL"]
 
 engine = create_engine(URL_DATABASE)
 

@@ -63,16 +63,20 @@ Create a PostgreSQL database (default name used by this project is
 CREATE DATABASE "QuoteBindAdmin";
 ```
 
-The connection string lives in `app/database/database.py`:
+The connection string is read from the `DATABASE_URL` environment variable
+(via a `.env` file, loaded with `python-dotenv`). Copy the example file and
+fill in your own credentials:
 
-```python
-URL_DATABASE = 'postgresql://<user>:<password>@<host>:<port>/QuoteBindAdmin'
+```bash
+cp .env.example .env
 ```
 
-Update `<user>`, `<password>`, `<host>`, and `<port>` to match your local
-PostgreSQL setup before running the app. (This value is hardcoded in source
-rather than read from an environment variable — if you're pushing to a
-shared or public repo, be careful not to commit real credentials here.)
+```
+DATABASE_URL=postgresql://<user>:<password>@<host>:<port>/QuoteBindAdmin
+```
+
+`.env` is gitignored, so your credentials never get committed — only
+`.env.example` (with placeholder values) is tracked in the repo.
 
 Tables are created automatically the first time the app starts
 (`Base.metadata.create_all(bind=engine)` in `main.py`), so no separate
