@@ -156,6 +156,7 @@ Create/update body:
 | Method | Path | Description |
 |---|---|---|
 | GET | `/questions/` | List all catalog questions |
+| GET | `/questions/page?page=&page_size=` | List catalog questions with offset pagination |
 | GET | `/questions/{question_id}` | Get a question by id |
 | POST | `/questions/` | Create a question |
 | PUT | `/questions/{question_id}` | Update a question |
@@ -168,6 +169,34 @@ Create/update body:
   "question_label": "Are you 18 years old?",
   "default_answer": "Yes"
 }
+```
+
+#### Pagination
+
+`GET /questions/page` returns a page of results along with pagination
+metadata, instead of the full list:
+
+| Query param | Default | Constraints |
+|---|---|---|
+| `page` | `1` | `>= 1` |
+| `page_size` | `10` | `1` to `50` |
+
+Response body:
+
+```json
+{
+  "data": [
+    { "question_id": 1, "question_label": "Are you 18 years old?", "default_answer": "Yes" }
+  ],
+  "page": 1,
+  "page_size": 10,
+  "total": 42,
+  "total_pages": 5
+}
+```
+
+```bash
+curl "http://127.0.0.1:8000/questions/page?page=2&page_size=10"
 ```
 
 ### Quotes — `/quotes`
