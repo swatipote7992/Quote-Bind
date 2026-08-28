@@ -1,6 +1,10 @@
 from fastapi import APIRouter, status, Query
 
-from app.schemas.question_catalog import QuestionCatalogCreate, QuestionCatalogResponse
+from app.schemas.question_catalog import (
+    QuestionCatalogCreate,
+    QuestionCatalogResponse,
+    QuestionCatalogPage,
+)
 from app.services.question_service import QuestionService
 
 router = APIRouter(prefix="/questions", tags=["Questions"])
@@ -11,12 +15,11 @@ async def get_questions():
     return QuestionService().get_questions()
 
 # Implementing Offset Pagination
-@router.get("/page", response_model=list[QuestionCatalogResponse])
+@router.get("/page", response_model=QuestionCatalogPage)
 async def get_by_page(
     page: int = Query(1, ge=1), page_size: int = Query(10, ge=1, le=50)
 ):
-    offset = (page - 1) * page_size
-    return QuestionService().get_by_page(offset, page_size)
+    return QuestionService().get_by_page(page, page_size)
 
 @router.get("/{question_id}", response_model=QuestionCatalogResponse)
 async def get_by_id(question_id: int):
