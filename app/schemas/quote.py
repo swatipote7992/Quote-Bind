@@ -42,3 +42,9 @@ class QuoteResponse(BaseModel):
     question_set: list[QuestionResponse]
     created_at: datetime
     updated_at: datetime
+
+
+class QuoteCursorPage(BaseModel):
+    data: list[QuoteResponse]
+    next_cursor: str | None
+    has_more: bool

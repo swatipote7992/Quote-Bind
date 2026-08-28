@@ -11,6 +11,16 @@ class QuoteService:
     def get_quotes(self):
         return self.quote_repository.get_quotes()
 
+    def get_by_page(self, after: str | None, limit: int):
+        items, has_more = self.quote_repository.get_by_cursor(after, limit)
+        next_cursor = items[-1]["id"] if has_more else None
+
+        return {
+            "data": items,
+            "next_cursor": next_cursor,
+            "has_more": has_more,
+        }
+
     def get_by_id(self, quote_id: str):
         quote = self.quote_repository.get_by_id(quote_id)
         if not quote:
