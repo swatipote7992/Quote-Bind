@@ -14,6 +14,21 @@ app.include_router(products_api_router)
 # Creates all the tables from quote_model in postgres
 Base.metadata.create_all(bind=engine)
 
+# Root Endpoints for testing
 @app.get("/")
 def get_root():
-    return {"message": "Hello World!"}
+    return {"message": "Get Successful!"}
+
+
+@app.post("/")
+def post_root():
+    return {"message": "Post Successful!"}
+
+
+@app.put("/")
+def put_root():
+    return {"message": "Put Successful!"}
+
+@app.delete("/")
+def delete_root():
+    return {"message": "Delete Successful!"}

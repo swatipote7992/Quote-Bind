@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from datetime import date,datetime
 from enum import Enum
 
@@ -11,6 +11,12 @@ class Applicant(BaseModel):
     phone: str
     date_of_birth: date
 
+    @field_validator("date_of_birth")
+    @classmethod
+    def validate_dob(cls, value: date) -> date:
+        if value >= date.today():
+            raise ValueError("Date of birth cannot be in the future.")
+        return value
 
 class QuestionResponse(BaseModel):
     question_id: int
