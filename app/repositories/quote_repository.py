@@ -58,6 +58,18 @@ class QuoteRepository:
             quotes = self._query(db).all()
             return [self._to_document(quote) for quote in quotes]
 
+    def get_by_cursor(self, after: str | None, limit: int) -> tuple[list[dict], bool]:
+        with SessionLocal() as db:
+            query = self._query(db).order_by(Quote.id.asc())
+            if after is not None:
+                query = query.filter(Quote.id > after)
+            quotes = query.limit(limit + 1).all()
+
+            has_more = len(quotes) > limit
+            quotes = quotes[:limit]
+
+            return [self._to_document(quote) for quote in quotes], has_more
+
     def get_by_id(self, quote_id: str) -> dict | None:
         with SessionLocal() as db:
             quote = self._query(db).filter(Quote.id == quote_id).first()
