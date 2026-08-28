@@ -93,6 +93,7 @@ order against a freshly created (empty) database:
 | `001_seed_question_sets.sql` | `product_catalog`, `question_catalog`, and a `question_set` per product |
 | `002_seed_applicants.sql` | 10 sample applicants |
 | `003_seed_quotes.sql` | 30 sample quotes (3 per applicant, across distinct products) |
+| `005_seed_more_quotes.sql` | 70 additional randomized quotes (bringing the total to 100), useful for exercising pagination |
 
 Run them with `psql`:
 
@@ -100,6 +101,7 @@ Run them with `psql`:
 psql -U <user> -d QuoteBindAdmin -f app/database/scripts/001_seed_question_sets.sql
 psql -U <user> -d QuoteBindAdmin -f app/database/scripts/002_seed_applicants.sql
 psql -U <user> -d QuoteBindAdmin -f app/database/scripts/003_seed_quotes.sql
+psql -U <user> -d QuoteBindAdmin -f app/database/scripts/005_seed_more_quotes.sql
 ```
 
 Note: `product_id` and `question_id` are `SERIAL`, so `001_seed_question_sets.sql`
@@ -205,6 +207,7 @@ curl "http://127.0.0.1:8000/questions/page?page=2&page_size=10"
 |---|---|---|
 | GET | `/quotes/` | List all quotes |
 | GET | `/quotes/search?name=&category=` | Search quotes by applicant name and/or product label |
+| GET | `/quotes/page?after=&limit=` | List quotes with keyset (cursor) pagination |
 | GET | `/quotes/{quote_id}` | Get a quote by id |
 | POST | `/quotes/` | Create a quote |
 | PUT | `/quotes/{quote_id}` | Update a quote |
@@ -228,6 +231,39 @@ question set:
     "date_of_birth": "1990-01-01"
   }
 }
+```
+
+#### Pagination
+
+`GET /quotes/page` returns a page of quotes using keyset (cursor)
+pagination instead of the full list. Quotes are ordered by `id` ascending;
+`after` is the `id` of the last quote seen on the previous page (omit it to
+get the first page), and `limit` caps how many quotes come back:
+
+| Query param | Default | Constraints |
+|---|---|---|
+| `after` | `null` | Must be an existing quote `id` |
+| `limit` | `10` | `1` to `50` |
+
+Response body:
+
+```json
+{
+  "data": [
+    { "id": "Q001", "status": "New", "product_id": 1, "applicant": { "...": "..." }, "question_set": [], "created_at": "...", "updated_at": "..." }
+  ],
+  "next_cursor": "Q010",
+  "has_more": true
+}
+```
+
+`next_cursor` is the `id` to pass as `after` on the next request; it's
+`null` once `has_more` is `false`. Unlike offset pagination, this stays
+correct even if rows are inserted or deleted between requests.
+
+```bash
+curl "http://127.0.0.1:8000/quotes/page?limit=10"
+curl "http://127.0.0.1:8000/quotes/page?after=Q010&limit=10"
 ```
 
 ## Example: try it with curl
