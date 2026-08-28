@@ -12,6 +12,9 @@ class QuestionService:
     def get_questions(self):
         return self.question_repository.get_all()
 
+    def get_by_page(self, offset: int, limit: int):
+        return self.question_repository.get_by_page(offset, limit)
+
     def get_by_id(self, question_id: int):
         question = self.question_repository.get_by_id(question_id)
         if not question:
