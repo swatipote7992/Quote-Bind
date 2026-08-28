@@ -12,8 +12,18 @@ class QuestionService:
     def get_questions(self):
         return self.question_repository.get_all()
 
-    def get_by_page(self, offset: int, limit: int):
-        return self.question_repository.get_by_page(offset, limit)
+    def get_by_page(self, page: int, page_size: int):
+        offset = (page - 1) * page_size
+        items, total = self.question_repository.get_by_page(offset, page_size)
+        total_page = (total + page_size - 1) // page_size
+
+        return {
+            "data": items,
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "total_pages": total_page,
+        }
 
     def get_by_id(self, question_id: int):
         question = self.question_repository.get_by_id(question_id)
