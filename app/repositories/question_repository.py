@@ -16,6 +16,16 @@ class QuestionRepository:
             entries = db.query(QuestionCatalog).all()
             return [self._to_document(entry) for entry in entries]
 
+    def get_by_page(self, offset: int, limit: int):
+        with SessionLocal() as db:
+            entries = (
+                db.query(QuestionCatalog)
+                .order_by(QuestionCatalog.question_id)
+                .offset(offset)
+                .limit(limit)
+            )
+            return [self._to_document(entry) for entry in entries]
+
     def get_by_id(self, question_id: int) -> dict | None:
         with SessionLocal() as db:
             entry = (
