@@ -1,11 +1,18 @@
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError
 from app.repositories.quote_repository import UnknownProductIdError
 
 async def unknown_product_id_handler(request: Request, exc: UnknownProductIdError):
     return JSONResponse(
         status_code=status.HTTP_404_NOT_FOUND,
         content={"detail": f"Unknown product_id: {exc.product_id}"},
+    )
+
+async def integrity_error_handler(request: Request, exc: IntegrityError):
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={"detail": "Cannot delete: this record is still referenced by another record"},
     )
 
 async def unhandled_exception_handler(request: Request, exc: Exception):
@@ -18,5 +25,6 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 #effect, just usable outside of main.py.
 def register_exception_handler(app: FastAPI) -> None:
     app.add_exception_handler(UnknownProductIdError, unknown_product_id_handler)
+    app.add_exception_handler(IntegrityError, integrity_error_handler)
     app.add_exception_handler(Exception, unhandled_exception_handler)
 
