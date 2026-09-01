@@ -288,11 +288,52 @@ curl -X POST http://127.0.0.1:8000/quotes/ \
   }'
 ```
 
+## Error handling
+
+Errors that aren't already `HTTPException`s raised directly in a service
+(e.g. the plain 404s/409s like `"Product not found"` or `"This Product
+already exist"`) are caught centrally by global exception handlers in
+`app/api/exception_handlers.py`, registered once on startup via
+`register_exception_handler(app)` in `main.py`:
+
+| Exception | Status | Response body |
+|---|---|---|
+| `UnknownProductIdError` (raised from `quote_repository.py` when a quote references a `product_id` that doesn't exist) | `404` | `{"detail": "Unknown product_id: <id>"}` |
+| `sqlalchemy.exc.IntegrityError` (e.g. deleting a product/question still referenced elsewhere) | `409` | `{"detail": "Cannot delete: this record is still referenced by another record"}` |
+| Any other unhandled exception | `500` | `{"detail": "Internal Server Error"}` |
+
+The `500` case logs the full traceback server-side (see Logging below) —
+the client only ever sees the generic message, never internal details.
+
+## Logging
+
+Configured once at startup in `main.py` via `logging.basicConfig(...)`,
+writing to **`app.log`** in the project root (not the console) at `INFO`
+level and above, formatted as:
+
+```
+%(asctime)s %(levelname)s %(name)s: %(message)s
+```
+
+The global exception handlers (`app/api/exception_handlers.py`) log as
+they run:
+
+- `WARNING` for expected/handled error conditions — an unknown
+  `product_id`, or an `IntegrityError` on delete — including the request
+  method/path (and the offending id, where relevant).
+- `ERROR` for any unhandled exception, via `logger.exception(...)`, which
+  includes the full traceback — this is the only place a real bug's stack
+  trace is captured, so check `app.log` first when a `500` shows up.
+
+`app.log` is written relative to wherever the app is started from and
+isn't tracked in git.
+
 ## Project structure
 
 ```
 app/
   api/routes/        FastAPI routers (products, questions, quotes)
+  api/exception_handlers.py  Global exception handlers (see Error handling)
   database/          DB engine/session setup + seed scripts
   models/            SQLAlchemy models
   schemas/           Pydantic request/response schemas
