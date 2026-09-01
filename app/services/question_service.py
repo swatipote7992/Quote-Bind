@@ -1,5 +1,4 @@
 from fastapi import HTTPException, status
-from sqlalchemy.exc import IntegrityError
 
 from app.repositories.question_repository import QuestionRepository
 from app.schemas.question_catalog import QuestionCatalogCreate
@@ -60,13 +59,7 @@ class QuestionService:
         return updated_questions
 
     def delete_question(self, question_id: int) -> None:
-        try:
-            deleted = self.question_repository.delete(question_id)
-        except IntegrityError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Cannot delete: this question_id is still used by an existing quote",
-            ) from exc
+        deleted = self.question_repository.delete(question_id)
 
         if not deleted:
             raise HTTPException(
