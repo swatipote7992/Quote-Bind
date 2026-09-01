@@ -31,6 +31,54 @@ def test_get_by_id_returns_product_when_found():
     assert service.get_by_id(1) == product
 
 
+def test_get_products_returns_all_products():
+    service = _service_with_mock_repo()
+    products = [{"product_id": 1, "product_label": "Audi", "isActive": True}]
+    service.product_repository.get_all.return_value = products
+
+    assert service.get_products() == products
+
+
+def test_get_by_label_raises_404_when_missing():
+    service = _service_with_mock_repo()
+    service.product_repository.get_by_label.return_value = None
+
+    with pytest.raises(HTTPException) as exc:
+        service.get_by_label("Nonexistent")
+
+    assert exc.value.status_code == 404
+
+
+def test_get_by_label_returns_product_when_found():
+    service = _service_with_mock_repo()
+    product = {"product_id": 1, "product_label": "Audi", "isActive": True}
+    service.product_repository.get_by_label.return_value = product
+
+    assert service.get_by_label("Audi") == product
+
+
+def test_update_product_returns_updated_product():
+    service = _service_with_mock_repo()
+    updated = {"product_id": 1, "product_label": "Audi Updated", "isActive": False}
+    service.product_repository.update.return_value = updated
+
+    result = service.update_product(
+        1, ProductCatalogCreate(product_label="Audi Updated", isActive=False)
+    )
+
+    assert result == updated
+
+
+def test_update_product_raises_404_when_missing():
+    service = _service_with_mock_repo()
+    service.product_repository.update.return_value = None
+
+    with pytest.raises(HTTPException) as exc:
+        service.update_product(999, ProductCatalogCreate(product_label="X", isActive=True))
+
+    assert exc.value.status_code == 404
+
+
 def test_create_product_raises_409_on_duplicate_label():
     service = _service_with_mock_repo()
     product = {"product_id": 1, "product_label": "Audi", "isActive": True}

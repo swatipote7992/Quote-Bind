@@ -47,6 +47,14 @@ def test_get_by_id_returns_quote_when_found():
     assert service.get_by_id("Q001") == quote
 
 
+def test_get_quotes_returns_all_quotes():
+    service = _service_with_mock_repo()
+    quotes = [{"id": "Q001", "status": "New"}]
+    service.quote_repository.get_quotes.return_value = quotes
+
+    assert service.get_quotes() == quotes
+
+
 def test_create_quote_generates_sequential_id_from_existing_count():
     service = _service_with_mock_repo()
     service.quote_repository.get_quotes.return_value = [{"id": "Q001"}, {"id": "Q002"}]
@@ -88,6 +96,27 @@ def test_update_quote_does_not_catch_unknown_product_id_error():
 
     with pytest.raises(UnknownProductIdError):
         service.update_quote("Q001", _quote_create())
+
+
+def test_update_quote_returns_updated_quote():
+    service = _service_with_mock_repo()
+    updated = {"id": "Q001", "status": "New", "product_id": 2}
+    service.quote_repository.update_quote.return_value = updated
+
+    result = service.update_quote("Q001", _quote_create())
+
+    assert result == updated
+
+
+def test_search_quotes_passes_through_to_repository():
+    service = _service_with_mock_repo()
+    results = [{"id": "Q001", "status": "New"}]
+    service.quote_repository.search_quotes.return_value = results
+
+    result = service.search_quotes(name="Jane", category="Audi")
+
+    assert result == results
+    service.quote_repository.search_quotes.assert_called_once_with(name="Jane", category="Audi")
 
 
 def test_delete_quote_raises_404_when_missing():

@@ -32,6 +32,14 @@ def test_get_by_id_returns_question_when_found():
     assert service.get_by_id(1) == question
 
 
+def test_get_questions_returns_all_questions():
+    service = _service_with_mock_repo()
+    questions = [{"question_id": 1, "question_label": "Q", "default_answer": "Yes"}]
+    service.question_repository.get_all.return_value = questions
+
+    assert service.get_questions() == questions
+
+
 def test_get_by_page_computes_offset_and_total_pages():
     service = _service_with_mock_repo()
     items = [{"question_id": i, "question_label": "Q", "default_answer": "Yes"} for i in range(1, 6)]
@@ -88,6 +96,18 @@ def test_update_question_raises_404_when_missing():
         )
 
     assert exc.value.status_code == 404
+
+
+def test_update_question_returns_updated_question():
+    service = _service_with_mock_repo()
+    updated = {"question_id": 1, "question_label": "Updated", "default_answer": "No"}
+    service.question_repository.update.return_value = updated
+
+    result = service.update_question(
+        1, QuestionCatalogCreate(question_label="Updated", default_answer="No")
+    )
+
+    assert result == updated
 
 
 def test_delete_question_raises_404_when_missing():
