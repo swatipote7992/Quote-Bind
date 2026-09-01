@@ -328,6 +328,40 @@ they run:
 `app.log` is written relative to wherever the app is started from and
 isn't tracked in git.
 
+### Azure Monitor / Application Insights (optional)
+
+Logs (and traces/metrics) can additionally be forwarded to Azure Monitor
+via the [Azure Monitor OpenTelemetry
+Distro](https://pypi.org/project/azure-monitor-opentelemetry/)
+(`azure-monitor-opentelemetry` in `requirements.txt`). This is entirely
+optional and off by default — `app.log` keeps working the same either way.
+
+To enable it, set `APPLICATIONINSIGHTS_CONNECTION_STRING` in `.env.local`
+(see `.env.local.example` for the placeholder format) to a real
+Application Insights connection string from the Azure portal. `main.py`
+checks for that env var at startup and, only if it's present, calls
+`configure_azure_monitor()` before the app is created:
+
+```python
+if os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING"):
+    from azure.monitor.opentelemetry import configure_azure_monitor
+    configure_azure_monitor(logger_name="")
+```
+
+`logger_name=""` attaches to the Python root logger, so every logger in
+the app (including the exception handlers' `WARNING`/`ERROR` logs above)
+gets mirrored to Azure, not just a specific named one.
+
+**Known caveat**: with this enabled, app startup can take significantly
+longer (tens of seconds) — the SDK's Azure resource detector tries to
+reach Azure's Instance Metadata Service to identify the hosting
+environment, which has to time out first on any machine that isn't
+actually running in Azure (i.e. local dev). You may also see benign
+`"recursive logging"` guard messages from the SDK's own internal
+diagnostics — not errors. Because of the startup cost, leave this env var
+unset for local development unless you're actively testing against a real
+Application Insights resource.
+
 ## Project structure
 
 ```
