@@ -14,7 +14,7 @@ def client():
     app = FastAPI()
     register_exception_handler(app)
     app.include_router(products_router)
-    return TestClient(app)
+    return TestClient(app, raise_server_exceptions=False)
 
 
 @pytest.fixture
@@ -95,6 +95,15 @@ def test_delete_product_returns_204(client, mock_service):
 
     assert response.status_code == 204
     mock_service.delete_product.assert_called_once_with(1)
+
+
+def test_unexpected_exception_returns_500_via_global_handler(client, mock_service):
+    mock_service.get_products.side_effect = RuntimeError("boom")
+
+    response = client.get("/products/")
+
+    assert response.status_code == 500
+    assert response.json() == {"detail": "Internal Server Error"}
 
 
 def test_delete_product_returns_409_via_global_handler_on_integrity_error(client, mock_service):
