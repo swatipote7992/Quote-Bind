@@ -1,4 +1,5 @@
 import logging
+import os
 
 from fastapi import FastAPI
 from app.api.routes.products_router import router as products_api_router
@@ -10,9 +11,18 @@ from app.models import quote_model  # noqa: F401 - registers models on Base
 from app.api.exception_handlers import register_exception_handler
 
 logging.basicConfig(
+    filename="app.log",
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
+
+# Also forward logs (and traces/metrics) to Azure Monitor / Application
+# Insights when configured. Optional: local dev works fine without this
+# env var set, and app.log is still written either way.
+if os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING"):
+    from azure.monitor.opentelemetry import configure_azure_monitor
+
+    configure_azure_monitor(logger_name="")
 
 app = FastAPI()
 
