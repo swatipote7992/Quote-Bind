@@ -7,6 +7,17 @@ from app.repositories.quote_repository import UnknownProductIdError
 
 logger = logging.getLogger(__name__)
 
+# use PUT /quotes/Q001 request with this input - {
+#     "product_id": 5,
+#     "applicant": {
+#       "applicant_id": 1001,
+#       "first_name": "John",
+#       "last_name": "Smith",
+#       "email": "john.smith@example.com",
+#       "phone": "7700900123",
+#       "date_of_birth": "1990-03-22"
+#     }
+# }
 async def unknown_product_id_handler(request: Request, exc: UnknownProductIdError):
     logger.warning(
         "Unknown product_id %s on %s %s", exc.product_id, request.method, request.url.path
