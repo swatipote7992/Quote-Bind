@@ -1,4 +1,5 @@
 import logging
+import os
 
 from fastapi import FastAPI
 from app.api.routes.products_router import router as products_api_router
@@ -14,6 +15,14 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
+
+# Also forward logs (and traces/metrics) to Azure Monitor / Application
+# Insights when configured. Optional: local dev works fine without this
+# env var set, and app.log is still written either way.
+if os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING"):
+    from azure.monitor.opentelemetry import configure_azure_monitor
+
+    configure_azure_monitor(logger_name="")
 
 app = FastAPI()
 
