@@ -1,5 +1,4 @@
 from fastapi import HTTPException, status
-from sqlalchemy.exc import IntegrityError
 
 from app.schemas.product_catalog import ProductCatalogCreate
 from app.repositories.product_repository import ProductRepository
@@ -50,13 +49,7 @@ class ProductService:
         return updated_product
 
     def delete_product(self, product_id: int) -> None:
-        try:
-            deleted = self.product_repository.delete(product_id)
-        except IntegrityError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Cannot delete: this product_id is still in use",
-            ) from exc
+        deleted = self.product_repository.delete(product_id)
 
         if not deleted:
             raise HTTPException(
