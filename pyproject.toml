@@ -1,2 +1,5 @@
 [tool.fastapi]
     entrypoint = "main:app"
+
+[tool.py_test.ini_options]
+    testpaths = ["tests"]
