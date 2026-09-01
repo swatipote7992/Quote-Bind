@@ -10,6 +10,7 @@ from app.models import quote_model  # noqa: F401 - registers models on Base
 from app.api.exception_handlers import register_exception_handler
 
 logging.basicConfig(
+    filename="app.log",
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
