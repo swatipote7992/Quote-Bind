@@ -12,3 +12,4 @@ app/api/routes/__pycache__/quotes_router.cpython-313.pyc
 .env.local
 app.log
 
+.coverage
