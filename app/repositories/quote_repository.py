@@ -1,4 +1,5 @@
-from sqlalchemy.orm import Query, Session, joinedload
+from sqlalchemy import Select, select
+from sqlalchemy.orm import Session, joinedload
 
 from app.database.database import SessionLocal
 from app.models.quote_model import Applicant, ProductCatalog, Quote, QuestionSet
@@ -36,8 +37,8 @@ class QuoteRepository:
             "updated_at": quote.updated_at,
         }
 
-    def _query(self, db: Session) -> Query:
-        return db.query(Quote).options(
+    def _query(self) -> Select:
+        return select(Quote).options(
             joinedload(Quote.applicant),
             joinedload(Quote.product)
             .joinedload(ProductCatalog.question_set)
@@ -46,8 +47,10 @@ class QuoteRepository:
 
     def _ensure_product_exists(self, db: Session, product_id: int) -> None:
         exists = (
-            db.query(ProductCatalog)
-            .filter(ProductCatalog.product_id == product_id)
+            db.execute(
+                select(ProductCatalog).where(ProductCatalog.product_id == product_id)
+            )
+            .scalars()
             .first()
         )
         if not exists:
@@ -55,15 +58,17 @@ class QuoteRepository:
 
     def get_quotes(self) -> list[dict]:
         with SessionLocal() as db:
-            quotes = self._query(db).all()
+            quotes = db.execute(self._query()).unique().scalars().all()
             return [self._to_document(quote) for quote in quotes]
 
     def get_by_cursor(self, after: str | None, limit: int) -> tuple[list[dict], bool]:
         with SessionLocal() as db:
-            query = self._query(db).order_by(Quote.id.asc())
+            stmt = self._query().order_by(Quote.id.asc())
             if after is not None:
-                query = query.filter(Quote.id > after)
-            quotes = query.limit(limit + 1).all()
+                stmt = stmt.where(Quote.id > after)
+            stmt = stmt.limit(limit + 1)
+
+            quotes = db.execute(stmt).unique().scalars().all()
 
             has_more = len(quotes) > limit
             quotes = quotes[:limit]
@@ -72,7 +77,8 @@ class QuoteRepository:
 
     def get_by_id(self, quote_id: str) -> dict | None:
         with SessionLocal() as db:
-            quote = self._query(db).filter(Quote.id == quote_id).first()
+            stmt = self._query().where(Quote.id == quote_id)
+            quote = db.execute(stmt).unique().scalars().first()
             return self._to_document(quote) if quote else None
 
     def save_quote(self, quote_document: dict) -> dict:
@@ -106,13 +112,13 @@ class QuoteRepository:
                 db.rollback()
                 raise
 
-            return self._to_document(
-                self._query(db).filter(Quote.id == quote.id).first()
-            )
+            stmt = self._query().where(Quote.id == quote.id)
+            return self._to_document(db.execute(stmt).unique().scalars().first())
 
     def update_quote(self, quote_id: str, updates: dict) -> dict | None:
         with SessionLocal() as db:
-            quote = self._query(db).filter(Quote.id == quote_id).first()
+            stmt = self._query().where(Quote.id == quote_id)
+            quote = db.execute(stmt).unique().scalars().first()
             if not quote:
                 return None
 
@@ -135,13 +141,16 @@ class QuoteRepository:
                 db.rollback()
                 raise
 
-            return self._to_document(
-                self._query(db).filter(Quote.id == quote_id).first()
-            )
+            stmt = self._query().where(Quote.id == quote_id)
+            return self._to_document(db.execute(stmt).unique().scalars().first())
 
     def delete_quote(self, quote_id: str) -> bool:
         with SessionLocal() as db:
-            quote = db.query(Quote).filter(Quote.id == quote_id).first()
+            quote = (
+                db.execute(select(Quote).where(Quote.id == quote_id))
+                .scalars()
+                .first()
+            )
             if not quote:
                 return False
 
@@ -155,12 +164,12 @@ class QuoteRepository:
         self, name: str | None = None, category: str | None = None
     ) -> list[dict]:
         with SessionLocal() as db:
-            query = self._query(db)
+            stmt = self._query()
             if category:
-                query = query.join(Quote.product).filter(
+                stmt = stmt.join(Quote.product).where(
                     ProductCatalog.product_label.ilike(category)
                 )
-            quotes = query.all()
+            quotes = db.execute(stmt).unique().scalars().all()
 
             if name:
                 needle = name.lower()
