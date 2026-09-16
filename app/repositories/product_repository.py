@@ -1,3 +1,5 @@
+from sqlalchemy import select
+
 from app.database.database import SessionLocal
 
 from app.models.quote_model import ProductCatalog
@@ -13,14 +15,14 @@ class ProductRepository:
 
     def get_all(self) -> list[dict]:
         with SessionLocal() as db:
-            entries = db.query(ProductCatalog).all()
+            entries = db.execute(select(ProductCatalog)).scalars().all()
             return [self._to_document(entry) for entry in entries]
 
     def get_by_id(self, product_id: int) -> dict | None:
         with SessionLocal() as db:
             entry = (
-                db.query(ProductCatalog)
-                .filter(ProductCatalog.product_id == product_id)
+                db.execute(select(ProductCatalog).where(ProductCatalog.product_id == product_id))
+                .scalars()
                 .first()
             )
             return self._to_document(entry) if entry else None
@@ -28,8 +30,8 @@ class ProductRepository:
     def get_by_label(self, label: str) -> dict | None:
         with SessionLocal() as db:
             entry = (
-                db.query(ProductCatalog)
-                .filter(ProductCatalog.product_label == label)
+                db.execute(select(ProductCatalog).where(ProductCatalog.product_label == label))
+                .scalars()
                 .first()
             )
             return self._to_document(entry) if entry else None
@@ -48,30 +50,33 @@ class ProductRepository:
     def update(self, product_id: int, updates: dict) -> dict | None:
         with SessionLocal() as db:
             entry = (
-                        db.query(ProductCatalog)
-                        .filter(ProductCatalog.product_id == product_id)
-                        .first()
+                db.execute(select(ProductCatalog).where(ProductCatalog.product_id == product_id))
+                .scalars()
+                .first()
             )
             if not entry:
                 return None
-            
+
             if updates.get("product_label") is not None:
                 entry.product_label = updates["product_label"]
 
             if updates.get("isActive") is not None:
                 entry.is_active = updates["isActive"]
-            
+
             db.commit()
             db.refresh(entry)
             return self._to_document(entry)
 
     def delete(self, product_id: int) -> bool:
         with SessionLocal() as db:
-            entry = db.query(ProductCatalog).filter(ProductCatalog.product_id == product_id).first()
+            entry = (
+                db.execute(select(ProductCatalog).where(ProductCatalog.product_id == product_id))
+                .scalars()
+                .first()
+            )
             if not entry:
                 return False
-            
+
             db.delete(entry)
             db.commit()
             return True
-                
