@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.git/
+.gitignore
+.env.local
+app.log
+.pytest_cache/
+.mypy_cache/
+.coverage
+README.md
