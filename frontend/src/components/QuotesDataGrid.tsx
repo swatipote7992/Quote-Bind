@@ -38,7 +38,7 @@ const columns: GridColDef<QuoteDto>[] = [
 ]
 
 export function QuotesDataGrid() {
-  const [quotes, setQuotes] = useState<Quote[]>([])
+  const [quotes, setQuotes] = useState<QuoteDto[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
