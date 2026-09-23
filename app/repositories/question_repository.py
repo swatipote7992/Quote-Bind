@@ -1,6 +1,11 @@
+import logging
+
 from app.database.database import SessionLocal
 from app.models.quote_model import QuestionCatalog
 from sqlalchemy import func, select
+
+logger = logging.getLogger(__name__)
+
 
 class QuestionRepository:
 
@@ -60,7 +65,8 @@ class QuestionRepository:
                 default_answer=default_answer,
             )
             db.add(entry)
-            # db.flush()  # We can use Flush to get the generated question_id
+            db.flush()  # populates entry.question_id (DB-generated) before commit
+            logger.info("Created question_id=%s (%s)", entry.question_id, question_label)
             db.commit()
             db.refresh(entry)
             return self._to_document(entry)
