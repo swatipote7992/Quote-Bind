@@ -2,6 +2,7 @@ import logging
 import os
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes.products_router import router as products_api_router
 from app.api.routes.questions_router import router as questions_api_router
 from app.api.routes.quotes_router import router as quotes_api_router
@@ -25,6 +26,28 @@ if os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING"):
     configure_azure_monitor(logger_name="")
 
 app = FastAPI()
+
+# Allow the local frontend dev server (Vite), plus any deployed frontend
+# origins supplied via CORS_ALLOWED_ORIGINS (comma-separated), to call this
+# API directly from the browser. Deployment-specific origins deliberately
+# aren't hardcoded here — see DEPLOYMENT.md.
+extra_cors_origins = [
+    origin.strip()
+    for origin in os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        *extra_cors_origins,
+    ],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Content-Type"],
+)
 
 # Register exception handler
 register_exception_handler(app)
