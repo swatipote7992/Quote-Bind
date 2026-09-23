@@ -3,7 +3,7 @@
 Exact steps used for the actual deployment. Image is built in Azure via
 `az acr build` — no local Docker required.
 
-**Live:** https://quotebind-api.mangodesert-d9013b05.eastus2.azurecontainerapps.io/
+**Live:** `<backend-fqdn>` (printed by step 10; not committed here — see the note in step 9 on why)
 
 This is the `backend/` project within the QuoteBind repo — a sibling to
 `frontend/`, deployed separately to Azure Static Web Apps (see
@@ -71,8 +71,8 @@ $LOCATION = "eastus"
 $PG_LOCATION = "eastus2"
 $CAE_LOCATION = "eastus2"
 $ACR_NAME = "quotebindacr<unique-suffix>"   # globally unique, alphanumeric only
-$PG_SERVER = "quotebind-pg"
-$PG_ADMIN_USER = "quotebindadmin"
+$PG_SERVER = "<pg-server-name>"
+$PG_ADMIN_USER = "<pg-admin-username>"
 $PG_ADMIN_PASSWORD = "<strong-password>"
 $PG_DB_NAME = "QuoteBindAdmin"
 $CAE_NAME = "quotebind-env"
@@ -150,24 +150,35 @@ az containerapp env delete --resource-group $RG --name $CAE_NAME --yes
 
 ## 9. CORS
 
-`main.py` allows the frontend's origin(s) explicitly (no wildcard):
+`main.py` allows the local Vite dev server by default, plus whatever's in
+the `CORS_ALLOWED_ORIGINS` env var (comma-separated) — deployment-specific
+origins (like the deployed frontend's hostname) are deliberately **not**
+hardcoded in source, so they don't end up committed to git:
 
 ```python
+extra_cors_origins = [
+    origin.strip()
+    for origin in os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "https://<static-web-app-default-hostname>",
-    ],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", *extra_cors_origins],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Content-Type"],
 )
 ```
 
-Add the frontend's Static Web App hostname here once it exists (created in
-`../frontend/DEPLOYMENT.md`), then rebuild/redeploy (steps 7 and 10).
+Set the frontend's Static Web App hostname (created in
+`../frontend/DEPLOYMENT.md`) via this env var when deploying (step 10). To
+change it later, **no image rebuild needed** — just update the env var on
+the running Container App:
+```powershell
+az containerapp update --resource-group $RG --name $CA_NAME `
+  --set-env-vars CORS_ALLOWED_ORIGINS="https://<swa-hostname>"
+```
 
 ## 10. Deploy the container app
 
@@ -183,13 +194,15 @@ az containerapp create `
   --target-port 8000 `
   --ingress external `
   --secrets database-url="postgresql://$PG_ADMIN_USER:$PG_ADMIN_PASSWORD@$PG_SERVER.postgres.database.azure.com:5432/${PG_DB_NAME}?sslmode=require" `
-  --env-vars DATABASE_URL=secretref:database-url `
+  --env-vars DATABASE_URL=secretref:database-url "CORS_ALLOWED_ORIGINS=https://<swa-hostname>" `
   --query properties.configuration.ingress.fqdn
 ```
 
-`--registry-identity system` authenticates the pull via the app's own managed identity (auto-granted `AcrPull`) — no registry password involved.
+`--registry-identity system` authenticates the pull via the app's own managed identity (auto-granted `AcrPull`) — no registry password involved. If the frontend isn't deployed yet, omit `CORS_ALLOWED_ORIGINS` for now and set it later with the `az containerapp update --set-env-vars` command in step 9 — no rebuild needed for that.
 
-Subsequent redeploys, after rebuilding the image (e.g. a CORS origin change) — same image tag, so this forces the Container App onto the freshly built image:
+Subsequent redeploys after rebuilding the image (an actual code change) —
+same image tag, so this forces the Container App onto the freshly built
+image:
 ```powershell
 az containerapp update `
   --resource-group $RG `
@@ -225,8 +238,10 @@ CORS, not the server response alone).
 Confirmed working after the `backend/` restructure (2026-09-23): rebuilt
 with the new scoped context (78.8 KiB vs. minutes of hanging before — see
 step 2), redeployed, `curl .../` returned `200`, and a CORS preflight with
-the frontend's `Origin` header returned the correct
-`access-control-allow-origin`.
+the deployed frontend's `Origin` header returned the correct
+`access-control-allow-origin`. Re-confirmed after moving CORS origins to
+`CORS_ALLOWED_ORIGINS` (2026-09-24): rebuilt, redeployed with the env var
+set, same two checks passed again.
 
 ## Out of scope
 

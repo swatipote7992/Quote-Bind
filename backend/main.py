@@ -27,14 +27,22 @@ if os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING"):
 
 app = FastAPI()
 
-# Allow the local frontend dev server (Vite) to call this API directly from
-# the browser. Local dev only — tighten this before any real deployment.
+# Allow the local frontend dev server (Vite), plus any deployed frontend
+# origins supplied via CORS_ALLOWED_ORIGINS (comma-separated), to call this
+# API directly from the browser. Deployment-specific origins deliberately
+# aren't hardcoded here — see DEPLOYMENT.md.
+extra_cors_origins = [
+    origin.strip()
+    for origin in os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
         "http://127.0.0.1:5173",
-        "https://victorious-wave-01b65050f.6.azurestaticapps.net",
+        *extra_cors_origins,
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE"],

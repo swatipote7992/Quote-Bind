@@ -4,7 +4,7 @@ Exact steps used for the actual deployment. Deployed directly via the SWA
 CLI from a local production build — see "Out of scope" below for why this
 isn't wired to CI/CD (yet).
 
-**Live:** https://victorious-wave-01b65050f.6.azurestaticapps.net/
+**Live:** `<swa-hostname>` (printed by step 3; not committed here — see the note in step 2)
 
 The backend lives in a sibling `backend/` project, deployed to its own
 Container App — see `../backend/DEPLOYMENT.md` for its deployment. This
@@ -29,13 +29,18 @@ $SWA_LOCATION = "eastus2"     # Static Web Apps is only available in a handful o
 
 ## 2. Point the production build at the deployed backend
 
-`.env.production` (repo root of this frontend project — Vite loads it automatically for `vite build`):
+Create `.env.production` (repo root of this frontend project — Vite loads
+it automatically for `vite build`). It's gitignored, not committed — the
+backend's FQDN is a real, live URL, and Vite bakes whatever's in here
+directly into the public JS bundle at build time regardless (anyone can
+read it out of the deployed site's network requests), so there's no
+reason to also carry it in git history:
 ```
 VITE_API_BASE_URL=https://<backend-fqdn>
 ```
 
-Vite bakes env vars in at build time, not runtime — this file has to exist
-*before* step 4's build, and changing it means rebuilding.
+This file has to exist *before* step 4's build, and changing it means
+rebuilding.
 
 ## 3. Create the Static Web App
 
@@ -44,15 +49,16 @@ az staticwebapp create --name $SWA_NAME --resource-group $RG --location $SWA_LOC
 az staticwebapp show --name $SWA_NAME --resource-group $RG --query defaultHostname -o tsv
 ```
 
-Take the printed hostname (e.g. `victorious-wave-01b65050f.6.azurestaticapps.net`).
+Take the printed hostname (a random name under `*.azurestaticapps.net`).
 
 > **Backend CORS step (do this before step 6's verification, not before
-> deploying the frontend itself):** add `https://<that-hostname>` to
-> `allow_origins` in the backend's `main.py`, then rebuild/redeploy the
-> backend (see `../backend/DEPLOYMENT.md`). Without this, the deployed
-> frontend loads fine but every API call fails in the browser with a CORS
-> error — `curl` won't show this, since CORS is enforced by the browser,
-> not the server response alone.
+> deploying the frontend itself):** set `https://<that-hostname>` in the
+> backend's `CORS_ALLOWED_ORIGINS` env var (see `../backend/DEPLOYMENT.md`
+> step 9) — no rebuild needed, just `az containerapp update
+> --set-env-vars`. Without this, the deployed frontend loads fine but
+> every API call fails in the browser with a CORS error — `curl` won't
+> show this, since CORS is enforced by the browser, not the server
+> response alone.
 
 ## 4. Build
 
@@ -98,15 +104,15 @@ curl -i -X OPTIONS "https://<backend-fqdn>/quotes/" `
 # look for: access-control-allow-origin: https://<swa-hostname>
 ```
 
-Confirmed working (2026-09-23): the preflight above returned
-`access-control-allow-origin: https://victorious-wave-01b65050f.6.azurestaticapps.net`,
-and `curl https://victorious-wave-01b65050f.6.azurestaticapps.net/` returned
-`200` with `index.html`. The Quotes grid itself shows "No rows" —
-expected, since the backend's Azure Postgres instance has never been
-seeded; the frontend↔backend wiring is correct, there's just no data yet.
-Re-confirmed after the `backend/` restructure (same day): redeployed this
-frontend build (nothing here actually changed, since only the backend
-moved) and re-ran both checks — same results.
+Confirmed working (2026-09-23): the preflight above returned the correct
+`access-control-allow-origin` for the deployed frontend's hostname, and a
+plain `curl` on the frontend's own URL returned `200` with `index.html`.
+The Quotes grid itself shows "No rows" — expected, since the backend's
+Azure Postgres instance had not been seeded yet at that point; the
+frontend↔backend wiring is correct, there's just no data. Re-confirmed
+after the `backend/` restructure (same day): redeployed this frontend
+build (nothing here actually changed, since only the backend moved) and
+re-ran both checks — same results.
 
 ## Out of scope
 
