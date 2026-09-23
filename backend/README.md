@@ -21,7 +21,7 @@ applicant to a product and its answered question set.
 
 ```bash
 git clone <repo-url>
-cd QuoteBind
+cd QuoteBind/backend
 ```
 
 ## 2. Create and activate a virtual environment
