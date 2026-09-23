@@ -1,4 +1,5 @@
 import { QuotesDataGrid } from './components/QuotesDataGrid'
+import { Footer } from './layout/Footer'
 
 function App() {
   return (
@@ -24,9 +25,7 @@ function App() {
         <QuotesDataGrid />
       </main>
 
-      <footer className="border-t border-slate-200 py-6 text-center text-xs text-slate-400">
-        QuoteBind
-      </footer>
+      <Footer />
     </div>
   )
 }
