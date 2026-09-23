@@ -13,24 +13,31 @@ describe('Header', () => {
     expect(screen.getByText('QuoteBind')).toBeInTheDocument()
   })
 
-  it('links Products, Question Set, and Quotes to their routes', () => {
+  it('links Quotes, Products, and Questions to their routes, in that order', () => {
     render(
       <MemoryRouter>
         <Header />
       </MemoryRouter>,
     )
 
+    const links = screen.getAllByRole('link')
+    expect(links.map((link) => link.textContent)).toEqual([
+      'Quotes',
+      'Products',
+      'Questions',
+    ])
+
+    expect(screen.getByRole('link', { name: 'Quotes' })).toHaveAttribute(
+      'href',
+      '/quotes',
+    )
     expect(screen.getByRole('link', { name: 'Products' })).toHaveAttribute(
       'href',
       '/products',
     )
-    expect(screen.getByRole('link', { name: 'Question Set' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Questions' })).toHaveAttribute(
       'href',
-      '/question-set',
-    )
-    expect(screen.getByRole('link', { name: 'Quotes' })).toHaveAttribute(
-      'href',
-      '/quotes',
+      '/questions',
     )
   })
 })

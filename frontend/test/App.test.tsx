@@ -25,9 +25,9 @@ describe('App', () => {
     renderAt('/quotes')
 
     expect(screen.getByText('QuoteBind')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Products' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Question Set' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Quotes' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Products' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Questions' })).toBeInTheDocument()
   })
 
   it('redirects / to /quotes', () => {
@@ -44,10 +44,10 @@ describe('App', () => {
     expect(screen.getByTestId('products-data-grid-stub')).toBeInTheDocument()
   })
 
-  it('renders the Question Set page at /question-set', () => {
-    renderAt('/question-set')
+  it('renders the Questions page at /questions', () => {
+    renderAt('/questions')
 
-    expect(screen.getByRole('heading', { name: 'Question Set' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Questions' })).toBeInTheDocument()
     expect(screen.getByTestId('questions-data-grid-stub')).toBeInTheDocument()
   })
 

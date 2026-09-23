@@ -47,4 +47,15 @@ describe('QuestionsDataGrid', () => {
       await screen.findByText(/Couldn't load questions: Network down/),
     ).toBeInTheDocument()
   })
+
+  it('provides a quick-filter search box for filtering records', async () => {
+    mockedGetQuestions.mockResolvedValue([sampleQuestion])
+
+    render(<QuestionsDataGrid />)
+
+    await screen.findByText('Are you 18 years old?')
+
+    expect(screen.getByRole('searchbox')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /show filters/i })).toBeInTheDocument()
+  })
 })

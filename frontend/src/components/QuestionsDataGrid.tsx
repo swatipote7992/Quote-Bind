@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Alert, Box } from '@mui/material'
-import { DataGrid, type GridColDef } from '@mui/x-data-grid'
+import { DataGrid, GridToolbar, type GridColDef } from '@mui/x-data-grid'
 import { getQuestions } from '../api/questions'
 import type { QuestionDto } from '../types/question_model'
 
@@ -57,6 +57,9 @@ export function QuestionsDataGrid() {
         pageSizeOptions={[10, 25, 50]}
         disableRowSelectionOnClick
         autoHeight
+        showToolbar
+        slots={{ toolbar: GridToolbar }}
+        slotProps={{ toolbar: { showQuickFilter: true } }}
       />
     </Box>
   )

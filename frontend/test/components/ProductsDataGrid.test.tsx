@@ -47,4 +47,15 @@ describe('ProductsDataGrid', () => {
       await screen.findByText(/Couldn't load products: Network down/),
     ).toBeInTheDocument()
   })
+
+  it('provides a quick-filter search box for filtering records', async () => {
+    mockedGetProducts.mockResolvedValue([sampleProduct])
+
+    render(<ProductsDataGrid />)
+
+    await screen.findByText('Audi')
+
+    expect(screen.getByRole('searchbox')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /show filters/i })).toBeInTheDocument()
+  })
 })

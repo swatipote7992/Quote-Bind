@@ -26,6 +26,12 @@ const sampleQuote: QuoteDto = {
   updated_at: '2026-01-01T10:00:00Z',
 }
 
+const otherQuote: QuoteDto = {
+  ...sampleQuote,
+  id: 'Q002',
+  applicant: { ...sampleQuote.applicant, first_name: 'Mark', last_name: 'Evans' },
+}
+
 describe('QuotesDataGrid', () => {
   afterEach(() => {
     mockedGetQuotes.mockReset()
@@ -59,5 +65,19 @@ describe('QuotesDataGrid', () => {
     expect(
       await screen.findByText(/Couldn't load quotes: Network down/),
     ).toBeInTheDocument()
+  })
+
+  it('provides a quick-filter search box for filtering records', async () => {
+    mockedGetQuotes.mockResolvedValue([sampleQuote, otherQuote])
+
+    render(<QuotesDataGrid />)
+
+    await screen.findByText('Jane Doe')
+
+    // The filtering behavior itself is MUI's own (well-tested) DataGrid
+    // logic; this confirms the toolbar + quick filter are actually wired
+    // up and rendered, i.e. that a user genuinely has a way to filter.
+    expect(screen.getByRole('searchbox')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /show filters/i })).toBeInTheDocument()
   })
 })

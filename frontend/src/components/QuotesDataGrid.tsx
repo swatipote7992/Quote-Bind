@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Alert, Box } from '@mui/material'
-import { DataGrid, type GridColDef } from '@mui/x-data-grid'
+import { DataGrid, GridToolbar, type GridColDef } from '@mui/x-data-grid'
 import { getQuotes } from '../api/quotes'
 import type { QuoteDto } from '../types/quote_model'
 
@@ -83,6 +83,9 @@ export function QuotesDataGrid() {
         pageSizeOptions={[10, 25, 50]}
         disableRowSelectionOnClick
         autoHeight
+        showToolbar
+        slots={{ toolbar: GridToolbar }}
+        slotProps={{ toolbar: { showQuickFilter: true } }}
       />
     </Box>
   )
