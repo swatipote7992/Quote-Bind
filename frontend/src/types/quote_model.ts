@@ -19,6 +19,13 @@ export interface ApplicantDto {
 export interface QuestionResponseDto {
   question_id: number
   question_label: string
+  default_answer: string
+  answer: string
+}
+
+export interface QuestionAnswerDto {
+  question_id: number
+  answer: string
 }
 
 export interface QuoteDto {
@@ -31,8 +38,8 @@ export interface QuoteDto {
   updated_at: string
 }
 
-// Request body for POST /quotes/ and PUT /quotes/{id}.
 export interface QuoteCreateDto {
   product_id: number
   applicant: ApplicantDto
+  answers?: QuestionAnswerDto[]
 }

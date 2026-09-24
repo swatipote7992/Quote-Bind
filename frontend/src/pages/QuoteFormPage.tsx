@@ -6,11 +6,13 @@ import {
   Button,
   CircularProgress,
   Divider,
-  List,
-  ListItem,
-  ListItemText,
+  FormControl,
+  FormControlLabel,
+  FormLabel,
   MenuItem,
   Paper,
+  Radio,
+  RadioGroup,
   Stack,
   TextField,
   Typography,
@@ -19,7 +21,7 @@ import { getProductQuestions, getProducts } from '../api/products'
 import { createQuote, getQuote, updateQuote } from '../api/quotes'
 import type { ProductDto } from '../types/product_model'
 import type { QuestionDto } from '../types/question_model'
-import type { QuoteCreateDto } from '../types/quote_model'
+import type { QuestionAnswerDto, QuoteCreateDto } from '../types/quote_model'
 
 interface FormValues {
   product_id: string
@@ -31,8 +33,9 @@ interface FormValues {
   date_of_birth: string
 }
 
-// New quotes start with this applicant pre-filled (same as the first seeded
-// applicant); every field stays editable.
+// New quotes use this applicant. Applicant ID, phone and date of birth aren't
+// shown on the form, but the API requires them, so they're sent from here (or,
+// when editing, from the quote as loaded).
 const defaultValues: FormValues = {
   product_id: '',
   applicant_id: '1001',
@@ -46,13 +49,34 @@ const defaultValues: FormValues = {
 interface QuestionsResult {
   productId: string
   questions: QuestionDto[]
+  // Current answer per question_id.
+  answers: Record<number, string>
   error: string | null
 }
 
-const today = new Date().toISOString().slice(0, 10)
+// Answers already saved on the quote being edited, for its own product.
+interface SavedAnswers {
+  productId: string
+  answers: Record<number, string>
+}
 
-function toPayload(values: FormValues): QuoteCreateDto {
+const baseAnswerOptions = ['Yes', 'No']
+
+function answerOptions(question: QuestionDto, current: string): string[] {
+  return [...new Set([...baseAnswerOptions, question.default_answer, current])]
+}
+
+function toAnswers(result: QuestionsResult | null): QuestionAnswerDto[] | undefined {
+  if (!result || result.error) return undefined
+  return result.questions.map((question) => ({
+    question_id: question.question_id,
+    answer: result.answers[question.question_id] ?? question.default_answer,
+  }))
+}
+
+function toPayload(values: FormValues, answers?: QuestionAnswerDto[]): QuoteCreateDto {
   return {
+    answers,
     product_id: Number(values.product_id),
     applicant: {
       applicant_id: Number(values.applicant_id),
@@ -76,6 +100,7 @@ export function QuoteFormPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [questionsResult, setQuestionsResult] = useState<QuestionsResult | null>(null)
+  const [savedAnswers, setSavedAnswers] = useState<SavedAnswers | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -93,6 +118,12 @@ export function QuoteFormPage() {
             email: quote.applicant.email,
             phone: quote.applicant.phone,
             date_of_birth: quote.applicant.date_of_birth,
+          })
+          setSavedAnswers({
+            productId: String(quote.product_id),
+            answers: Object.fromEntries(
+              quote.question_set.map((item) => [item.question_id, item.answer]),
+            ),
           })
         }
       })
@@ -120,13 +151,24 @@ export function QuoteFormPage() {
 
     getProductQuestions(Number(productId))
       .then((questions) => {
-        if (!cancelled) setQuestionsResult({ productId, questions, error: null })
+        if (cancelled) return
+        // Start from each question's default answer, then apply the answers
+        // already saved on this quote (only while its product is unchanged).
+        const saved = savedAnswers?.productId === productId ? savedAnswers.answers : {}
+        const answers = Object.fromEntries(
+          questions.map((question) => [
+            question.question_id,
+            saved[question.question_id] ?? question.default_answer,
+          ]),
+        )
+        setQuestionsResult({ productId, questions, answers, error: null })
       })
       .catch((err: unknown) => {
         if (!cancelled) {
           setQuestionsResult({
             productId,
             questions: [],
+            answers: {},
             error: err instanceof Error ? err.message : 'Failed to load questions',
           })
         }
@@ -135,7 +177,7 @@ export function QuoteFormPage() {
     return () => {
       cancelled = true
     }
-  }, [values.product_id])
+  }, [values.product_id, savedAnswers])
 
   const questionsLoading =
     values.product_id !== '' && questionsResult?.productId !== values.product_id
@@ -147,13 +189,19 @@ export function QuoteFormPage() {
       setValues((prev) => ({ ...prev, [field]: event.target.value }))
     }
 
+  const handleAnswerChange = (questionId: number, answer: string) => {
+    setQuestionsResult((prev) =>
+      prev ? { ...prev, answers: { ...prev.answers, [questionId]: answer } } : prev,
+    )
+  }
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
     setSaving(true)
     setError(null)
 
     try {
-      const payload = toPayload(values)
+      const payload = toPayload(values, toAnswers(questions))
       if (quoteId) {
         await updateQuote(quoteId, payload)
       } else {
@@ -199,14 +247,6 @@ export function QuoteFormPage() {
                 ))}
               </TextField>
 
-              <TextField
-                required
-                label="Applicant ID"
-                type="number"
-                value={values.applicant_id}
-                onChange={handleChange('applicant_id')}
-              />
-
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2.5}>
                 <TextField
                   required
@@ -232,25 +272,6 @@ export function QuoteFormPage() {
                 onChange={handleChange('email')}
               />
 
-              <TextField
-                required
-                label="Phone"
-                value={values.phone}
-                onChange={handleChange('phone')}
-              />
-
-              <TextField
-                required
-                label="Date of birth"
-                type="date"
-                value={values.date_of_birth}
-                onChange={handleChange('date_of_birth')}
-                slotProps={{
-                  inputLabel: { shrink: true },
-                  htmlInput: { max: today },
-                }}
-              />
-
               {values.product_id && (
                 <Box>
                   <Divider sx={{ mb: 2 }} />
@@ -273,16 +294,36 @@ export function QuoteFormPage() {
                     </Typography>
                   )}
                   {questions && questions.questions.length > 0 && (
-                    <List dense>
-                      {questions.questions.map((question) => (
-                        <ListItem key={question.question_id} disableGutters>
-                          <ListItemText
-                            primary={question.question_label}
-                            secondary={`Default answer: ${question.default_answer}`}
-                          />
-                        </ListItem>
-                      ))}
-                    </List>
+                    <Stack spacing={2} sx={{ mt: 1 }}>
+                      {questions.questions.map((question) => {
+                        const answer =
+                          questions.answers[question.question_id] ?? question.default_answer
+                        return (
+                          <FormControl key={question.question_id}>
+                            <FormLabel id={`question-${question.question_id}-label`}>
+                              {question.question_label}
+                            </FormLabel>
+                            <RadioGroup
+                              row
+                              aria-labelledby={`question-${question.question_id}-label`}
+                              value={answer}
+                              onChange={(event) =>
+                                handleAnswerChange(question.question_id, event.target.value)
+                              }
+                            >
+                              {answerOptions(question, answer).map((option) => (
+                                <FormControlLabel
+                                  key={option}
+                                  value={option}
+                                  control={<Radio />}
+                                  label={option}
+                                />
+                              ))}
+                            </RadioGroup>
+                          </FormControl>
+                        )
+                      })}
+                    </Stack>
                   )}
                 </Box>
               )}
@@ -291,7 +332,11 @@ export function QuoteFormPage() {
                 <Button variant="outlined" onClick={() => navigate('/quotes')}>
                   Cancel
                 </Button>
-                <Button type="submit" variant="contained" disabled={saving}>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={saving || questionsLoading}
+                >
                   {saving ? 'Saving…' : 'Save'}
                 </Button>
               </Stack>

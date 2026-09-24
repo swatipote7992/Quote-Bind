@@ -2,10 +2,14 @@ from datetime import datetime, timezone
 
 import pytest
 
-from app.models.quote_model import Applicant, QuestionCatalog, QuestionSet
+from app.models.quote_model import Applicant, QuestionCatalog, QuestionSet, QuoteAnswer
 from app.repositories.product_repository import ProductRepository
 from app.repositories.question_repository import QuestionRepository
-from app.repositories.quote_repository import QuoteRepository, UnknownProductIdError
+from app.repositories.quote_repository import (
+    QuoteRepository,
+    UnknownProductIdError,
+    UnknownQuestionIdError,
+)
 
 pytestmark = pytest.mark.usefixtures("db_session")
 
@@ -43,16 +47,23 @@ def _applicant_payload(ref_id=1001, first_name="Jane"):
     }
 
 
-def _quote_document(quote_id, product_id, applicant=None):
+def _quote_document(quote_id, product_id, applicant=None, answers=None):
     now = datetime.now(timezone.utc).isoformat()
     return {
         "id": quote_id,
         "status": "New",
         "product_id": product_id,
         "applicant": applicant or _applicant_payload(),
+        "answers": answers,
         "created_at": now,
         "updated_at": now,
     }
+
+
+def _question_ids(db_session):
+    """All question_ids in the catalog, in creation order."""
+    with db_session() as db:
+        return [q.question_id for q in db.query(QuestionCatalog).order_by(QuestionCatalog.question_id)]
 
 
 def test_save_quote_and_get_by_id(db_session):
@@ -192,3 +203,110 @@ def test_search_quotes_by_name_matches_first_or_last_name_case_insensitively(db_
     results = repo.search_quotes(name="jane")
 
     assert [q["id"] for q in results] == ["Q001"]
+
+
+def test_save_quote_defaults_every_answer_when_none_supplied(db_session):
+    product_id = _seed_product_with_question_set(db_session, "Audi", ["Q1", "Q2"])
+
+    saved = QuoteRepository().save_quote(_quote_document("Q001", product_id))
+
+    assert [(q["default_answer"], q["answer"]) for q in saved["question_set"]] == [
+        ("Yes", "Yes"),
+        ("Yes", "Yes"),
+    ]
+
+
+def test_save_quote_stores_supplied_answer_alongside_default(db_session):
+    product_id = _seed_product_with_question_set(db_session, "Audi", ["Q1", "Q2"])
+    first, second = _question_ids(db_session)
+    repo = QuoteRepository()
+
+    saved = repo.save_quote(
+        _quote_document("Q001", product_id, answers=[{"question_id": second, "answer": "No"}])
+    )
+
+    by_id = {q["question_id"]: q for q in saved["question_set"]}
+    assert by_id[first]["answer"] == "Yes"  # not supplied -> default
+    assert by_id[second]["default_answer"] == "Yes"
+    assert by_id[second]["answer"] == "No"
+    assert repo.get_by_id("Q001") == saved
+
+
+def test_save_quote_rejects_answer_for_question_outside_the_product(db_session):
+    audi = _seed_product_with_question_set(db_session, "Audi", ["Q1"])
+    _seed_product_with_question_set(db_session, "BMW", ["Q2"])
+    _, bmw_question = _question_ids(db_session)
+    repo = QuoteRepository()
+
+    with pytest.raises(UnknownQuestionIdError):
+        repo.save_quote(
+            _quote_document("Q001", audi, answers=[{"question_id": bmw_question, "answer": "No"}])
+        )
+
+    assert repo.get_by_id("Q001") is None
+
+
+def test_update_quote_replaces_answers(db_session):
+    product_id = _seed_product_with_question_set(db_session, "Audi", ["Q1", "Q2"])
+    first, _ = _question_ids(db_session)
+    repo = QuoteRepository()
+    repo.save_quote(_quote_document("Q001", product_id))
+
+    updated = repo.update_quote("Q001", {"answers": [{"question_id": first, "answer": "No"}]})
+
+    by_id = {q["question_id"]: q["answer"] for q in updated["question_set"]}
+    assert by_id[first] == "No"
+    assert repo.get_by_id("Q001") == updated
+
+
+def test_update_quote_without_answers_keeps_existing_answers(db_session):
+    product_id = _seed_product_with_question_set(db_session, "Audi", ["Q1"])
+    (question_id,) = _question_ids(db_session)
+    repo = QuoteRepository()
+    repo.save_quote(
+        _quote_document("Q001", product_id, answers=[{"question_id": question_id, "answer": "No"}])
+    )
+
+    updated = repo.update_quote("Q001", {"applicant": _applicant_payload(1001, "Janet")})
+
+    assert [q["answer"] for q in updated["question_set"]] == ["No"]
+
+
+def test_update_quote_resets_answers_when_product_changes(db_session):
+    product_a = _seed_product_with_question_set(db_session, "Audi", ["Q1"])
+    product_b = _seed_product_with_question_set(db_session, "BMW", ["Q2"])
+    first, _ = _question_ids(db_session)
+    repo = QuoteRepository()
+    repo.save_quote(
+        _quote_document("Q001", product_a, answers=[{"question_id": first, "answer": "No"}])
+    )
+
+    updated = repo.update_quote("Q001", {"product_id": product_b})
+
+    assert [(q["question_label"], q["answer"]) for q in updated["question_set"]] == [("Q2", "Yes")]
+
+
+def test_quote_without_stored_answers_falls_back_to_defaults(db_session):
+    product_id = _seed_product_with_question_set(db_session, "Audi", ["Q1"])
+    repo = QuoteRepository()
+    repo.save_quote(_quote_document("Q001", product_id))
+    with db_session() as db:
+        db.query(QuoteAnswer).delete()
+        db.commit()
+
+    quote = repo.get_by_id("Q001")
+
+    assert [(q["question_label"], q["default_answer"], q["answer"]) for q in quote["question_set"]] == [
+        ("Q1", "Yes", "Yes")
+    ]
+
+
+def test_delete_quote_removes_its_answers(db_session):
+    product_id = _seed_product_with_question_set(db_session, "Audi", ["Q1"])
+    repo = QuoteRepository()
+    repo.save_quote(_quote_document("Q001", product_id))
+
+    assert repo.delete_quote("Q001") is True
+
+    with db_session() as db:
+        assert db.query(QuoteAnswer).count() == 0

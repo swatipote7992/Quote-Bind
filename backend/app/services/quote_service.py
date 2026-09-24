@@ -37,6 +37,7 @@ class QuoteService:
             "status": Status.new.value,
             "product_id": quote.product_id,
             "applicant": quote.applicant.model_dump(mode="json"),
+            "answers": [a.model_dump() for a in quote.answers] if quote.answers is not None else None,
             "created_at": now.isoformat(),
             "updated_at": now.isoformat(),
         }

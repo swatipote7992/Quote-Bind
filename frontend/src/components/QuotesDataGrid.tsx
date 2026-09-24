@@ -10,17 +10,31 @@ import {
   DialogContentText,
   DialogTitle,
   Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
 } from '@mui/material'
 import { DataGrid, GridToolbar, type GridColDef } from '@mui/x-data-grid'
 import { deleteQuote, getQuotes } from '../api/quotes'
 import type { QuoteDto } from '../types/quote_model'
 
 function buildColumns(
+  onViewAnswers: (quote: QuoteDto) => void,
   onEdit: (quote: QuoteDto) => void,
   onDelete: (quote: QuoteDto) => void,
 ): GridColDef<QuoteDto>[] {
   return [
-    { field: 'id', headerName: 'Quote ID', width: 90 },
+    {
+      field: 'id',
+      headerName: 'Quote ID',
+      width: 90,
+      // Numeric-aware, so Q1000 sorts after Q999 rather than before it.
+      sortComparator: (a: string, b: string) =>
+        a.localeCompare(b, undefined, { numeric: true }),
+    },
     { field: 'status', headerName: 'Status', width: 100 },
     { field: 'product_id', headerName: 'Product', width: 85, type: 'number' },
     {
@@ -55,6 +69,23 @@ function buildColumns(
         }),
     },
     {
+      field: 'question_set',
+      headerName: 'Answers',
+      width: 110,
+      sortable: false,
+      // Plain-text form of the answers, used by quick filter and export.
+      valueGetter: (_value, row) =>
+        row.question_set.map((item) => `${item.question_label}: ${item.answer}`).join('; '),
+      renderCell: ({ row }) =>
+        row.question_set.length === 0 ? (
+          '—'
+        ) : (
+          <Button size="small" onClick={() => onViewAnswers(row)}>
+            View ({row.question_set.length})
+          </Button>
+        ),
+    },
+    {
       field: 'actions',
       headerName: 'Actions',
       width: 165,
@@ -86,6 +117,7 @@ export function QuotesDataGrid() {
   const [quotes, setQuotes] = useState<QuoteDto[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [quoteToView, setQuoteToView] = useState<QuoteDto | null>(null)
   const [quoteToDelete, setQuoteToDelete] = useState<QuoteDto | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
@@ -133,6 +165,7 @@ export function QuotesDataGrid() {
   }
 
   const columns = buildColumns(
+    (quote) => setQuoteToView(quote),
     (quote) => navigate(`/quotes/${encodeURIComponent(quote.id)}/edit`),
     (quote) => setQuoteToDelete(quote),
   )
@@ -153,6 +186,8 @@ export function QuotesDataGrid() {
         loading={loading}
         initialState={{
           pagination: { paginationModel: { pageSize: 10 } },
+          // Newest quotes first.
+          sorting: { sortModel: [{ field: 'id', sort: 'desc' }] },
         }}
         pageSizeOptions={[10, 25, 50]}
         disableRowSelectionOnClick
@@ -161,6 +196,42 @@ export function QuotesDataGrid() {
         slots={{ toolbar: GridToolbar }}
         slotProps={{ toolbar: { showQuickFilter: true } }}
       />
+
+      <Dialog
+        open={quoteToView !== null}
+        onClose={() => setQuoteToView(null)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Answers for quote {quoteToView?.id}</DialogTitle>
+        <DialogContent>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Question</TableCell>
+                  <TableCell>Default answer</TableCell>
+                  <TableCell>Answer</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {quoteToView?.question_set.map((item) => (
+                  <TableRow key={item.question_id}>
+                    <TableCell>{item.question_label}</TableCell>
+                    <TableCell>{item.default_answer}</TableCell>
+                    <TableCell sx={{ fontWeight: item.answer !== item.default_answer ? 600 : 400 }}>
+                      {item.answer}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setQuoteToView(null)}>Close</Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog open={quoteToDelete !== null} onClose={closeDeleteDialog}>
         <DialogTitle>Delete quote?</DialogTitle>

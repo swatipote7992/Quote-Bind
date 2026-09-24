@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QuoteFormPage } from '../../src/pages/QuoteFormPage'
 import { createQuote, getQuote, updateQuote } from '../../src/api/quotes'
@@ -33,7 +33,20 @@ const existingQuote: QuoteDto = {
     phone: '7700900123',
     date_of_birth: '1990-01-01',
   },
-  question_set: [],
+  question_set: [
+    {
+      question_id: 1,
+      question_label: 'Are you 18 years old?',
+      default_answer: 'Yes',
+      answer: 'No',
+    },
+    {
+      question_id: 4,
+      question_label: 'Do you hold a valid UK driving license?',
+      default_answer: 'Yes',
+      answer: 'Yes',
+    },
+  ],
   created_at: '2026-01-01T10:00:00Z',
   updated_at: '2026-01-01T10:00:00Z',
 }
@@ -65,15 +78,21 @@ describe('QuoteFormPage', () => {
     jest.resetAllMocks()
   })
 
+  it('does not show applicant id, phone or date of birth', async () => {
+    renderAt('/quotes/new')
+
+    await screen.findByDisplayValue('Quote')
+    expect(screen.queryByLabelText(/applicant id/i)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/phone/i)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/date of birth/i)).not.toBeInTheDocument()
+  })
+
   it('pre-fills the applicant as Quote Admin on a new quote', async () => {
     renderAt('/quotes/new')
 
     expect(await screen.findByDisplayValue('Quote')).toBeInTheDocument()
     expect(screen.getByLabelText(/last name/i)).toHaveValue('Admin')
     expect(screen.getByLabelText(/email/i)).toHaveValue('quote.admin@gmail.com')
-    expect(screen.getByLabelText(/phone/i)).toHaveValue('123-456-7890')
-    expect(screen.getByLabelText(/date of birth/i)).toHaveValue('1980-01-01')
-    expect(screen.getByLabelText(/applicant id/i)).toHaveValue(1001)
     expect(screen.queryByText('Questions')).not.toBeInTheDocument()
   })
 
@@ -86,6 +105,22 @@ describe('QuoteFormPage', () => {
     expect(await screen.findByText('Are you 18 years old?')).toBeInTheDocument()
     expect(screen.getByText('Do you hold a valid UK driving license?')).toBeInTheDocument()
     expect(mockedGetProductQuestions).toHaveBeenCalledWith(1)
+  })
+
+  it('renders each question as radio buttons with the default answer selected', async () => {
+    renderAt('/quotes/new')
+
+    fireEvent.mouseDown(await screen.findByRole('combobox', { name: /product/i }))
+    fireEvent.click(await screen.findByRole('option', { name: 'Home' }))
+
+    const group = await screen.findByRole('radiogroup', { name: 'Are you 18 years old?' })
+    expect(within(group).getByRole('radio', { name: 'Yes' })).toBeChecked()
+    expect(within(group).getByRole('radio', { name: 'No' })).not.toBeChecked()
+
+    fireEvent.click(within(group).getByRole('radio', { name: 'No' }))
+
+    expect(within(group).getByRole('radio', { name: 'No' })).toBeChecked()
+    expect(within(group).getByRole('radio', { name: 'Yes' })).not.toBeChecked()
   })
 
   it('shows an error when the questions fail to load', async () => {
@@ -107,28 +142,31 @@ describe('QuoteFormPage', () => {
 
     fireEvent.mouseDown(await screen.findByRole('combobox', { name: /product/i }))
     fireEvent.click(await screen.findByRole('option', { name: 'Home' }))
-    fireEvent.change(screen.getByLabelText(/applicant id/i), { target: { value: '1001' } })
+    const driving = await screen.findByRole('radiogroup', {
+      name: 'Do you hold a valid UK driving license?',
+    })
+    fireEvent.click(within(driving).getByRole('radio', { name: 'No' }))
     fireEvent.change(screen.getByLabelText(/first name/i), { target: { value: 'Jane' } })
     fireEvent.change(screen.getByLabelText(/last name/i), { target: { value: 'Doe' } })
     fireEvent.change(screen.getByLabelText(/email/i), {
       target: { value: 'jane.doe@example.com' },
-    })
-    fireEvent.change(screen.getByLabelText(/phone/i), { target: { value: '7700900123' } })
-    fireEvent.change(screen.getByLabelText(/date of birth/i), {
-      target: { value: '1990-01-01' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() =>
       expect(mockedCreateQuote).toHaveBeenCalledWith({
         product_id: 1,
+        answers: [
+          { question_id: 1, answer: 'Yes' },
+          { question_id: 4, answer: 'No' },
+        ],
         applicant: {
           applicant_id: 1001,
           first_name: 'Jane',
           last_name: 'Doe',
           email: 'jane.doe@example.com',
-          phone: '7700900123',
-          date_of_birth: '1990-01-01',
+          phone: '123-456-7890',
+          date_of_birth: '1980-01-01',
         },
       }),
     )
@@ -144,6 +182,10 @@ describe('QuoteFormPage', () => {
     expect(await screen.findByDisplayValue('Jane')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Edit Quote Q001' })).toBeInTheDocument()
 
+    // Saved answers win over the catalog defaults.
+    const group = await screen.findByRole('radiogroup', { name: 'Are you 18 years old?' })
+    expect(within(group).getByRole('radio', { name: 'No' })).toBeChecked()
+
     fireEvent.change(screen.getByLabelText(/first name/i), { target: { value: 'Janet' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
@@ -152,7 +194,17 @@ describe('QuoteFormPage', () => {
         'Q001',
         expect.objectContaining({
           product_id: 1,
-          applicant: expect.objectContaining({ first_name: 'Janet' }),
+          // Hidden fields are sent back exactly as loaded.
+          applicant: expect.objectContaining({
+            first_name: 'Janet',
+            applicant_id: 1001,
+            phone: '7700900123',
+            date_of_birth: '1990-01-01',
+          }),
+          answers: [
+            { question_id: 1, answer: 'No' },
+            { question_id: 4, answer: 'Yes' },
+          ],
         }),
       ),
     )
@@ -166,6 +218,7 @@ describe('QuoteFormPage', () => {
     renderAt('/quotes/Q001/edit')
 
     await screen.findByDisplayValue('Jane')
+    await screen.findByRole('radiogroup', { name: 'Are you 18 years old?' })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     expect(await screen.findByText('PUT failed')).toBeInTheDocument()

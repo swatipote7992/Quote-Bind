@@ -35,7 +35,14 @@ const sampleQuote: QuoteDto = {
     phone: '7700900123',
     date_of_birth: '1990-01-01',
   },
-  question_set: [],
+  question_set: [
+    {
+      question_id: 1,
+      question_label: 'Are you 18 years old?',
+      default_answer: 'Yes',
+      answer: 'No',
+    },
+  ],
   created_at: '2026-01-01T10:00:00Z',
   updated_at: '2026-01-01T10:00:00Z',
 }
@@ -61,6 +68,23 @@ describe('QuotesDataGrid', () => {
     expect(screen.getByText('Jane Doe')).toBeInTheDocument()
     expect(screen.getByText('jane.doe@example.com')).toBeInTheDocument()
     expect(screen.getByText('7700900123')).toBeInTheDocument()
+  })
+
+  it('lists quotes newest first, sorted by id descending', async () => {
+    mockedGetQuotes.mockResolvedValue([
+      { ...sampleQuote, id: 'Q009' },
+      { ...sampleQuote, id: 'Q1000' },
+      { ...sampleQuote, id: 'Q010' },
+    ])
+
+    renderGrid()
+
+    await screen.findByText('Q1000')
+    const ids = screen
+      .getAllByRole('row')
+      .filter((row) => row.getAttribute('data-id'))
+      .map((row) => row.getAttribute('data-id'))
+    expect(ids).toEqual(['Q1000', 'Q010', 'Q009'])
   })
 
   it('renders an empty grid with no rows when there are no quotes', async () => {
@@ -94,6 +118,26 @@ describe('QuotesDataGrid', () => {
     // up and rendered, i.e. that a user genuinely has a way to filter.
     expect(screen.getByRole('searchbox')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /show filters/i })).toBeInTheDocument()
+  })
+
+  it('shows each question with its default answer and answer in a dialog', async () => {
+    mockedGetQuotes.mockResolvedValue([sampleQuote])
+
+    renderGrid()
+
+    await screen.findByText('Q001')
+    fireEvent.click(screen.getByRole('button', { name: 'View (1)' }))
+
+    const dialog = await screen.findByRole('dialog')
+    const row = within(dialog).getByRole('row', { name: /Are you 18 years old\?/ })
+    expect(within(row).getAllByRole('cell').map((cell) => cell.textContent)).toEqual([
+      'Are you 18 years old?',
+      'Yes',
+      'No',
+    ])
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 
   it('navigates to the edit page when Edit is clicked', async () => {
@@ -130,7 +174,8 @@ describe('QuotesDataGrid', () => {
     renderGrid()
 
     await screen.findByText('Q001')
-    fireEvent.click(screen.getAllByRole('button', { name: 'Delete' })[0])
+    const q001Row = screen.getByText('Q001').closest('[role="row"]') as HTMLElement
+    fireEvent.click(within(q001Row).getByRole('button', { name: 'Delete' }))
 
     const dialog = await screen.findByRole('dialog')
     fireEvent.click(within(dialog).getByRole('button', { name: 'OK' }))

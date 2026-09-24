@@ -3,7 +3,10 @@ import logging
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
-from app.repositories.quote_repository import UnknownProductIdError
+from app.repositories.quote_repository import (
+    UnknownProductIdError,
+    UnknownQuestionIdError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +30,15 @@ async def unknown_product_id_handler(request: Request, exc: UnknownProductIdErro
         content={"detail": f"Unknown product_id: {exc.product_id}"},
     )
 
+async def unknown_question_id_handler(request: Request, exc: UnknownQuestionIdError):
+    logger.warning(
+        "Unknown question_id %s on %s %s", exc.question_id, request.method, request.url.path
+    )
+    return JSONResponse(
+        status_code=422,
+        content={"detail": str(exc)},
+    )
+
 async def integrity_error_handler(request: Request, exc: IntegrityError):
     logger.warning("IntegrityError on %s %s", request.method, request.url.path)
     return JSONResponse(
@@ -45,6 +57,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 #effect, just usable outside of main.py.
 def register_exception_handler(app: FastAPI) -> None:
     app.add_exception_handler(UnknownProductIdError, unknown_product_id_handler)
+    app.add_exception_handler(UnknownQuestionIdError, unknown_question_id_handler)
     app.add_exception_handler(IntegrityError, integrity_error_handler)
     app.add_exception_handler(Exception, unhandled_exception_handler)
 

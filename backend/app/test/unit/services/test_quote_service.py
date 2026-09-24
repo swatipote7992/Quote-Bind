@@ -5,7 +5,7 @@ import pytest
 from fastapi import HTTPException
 
 from app.repositories.quote_repository import UnknownProductIdError
-from app.schemas.quote import Applicant, QuoteCreate
+from app.schemas.quote import Applicant, QuestionAnswerInput, QuoteCreate
 from app.services.quote_service import QuoteService
 
 
@@ -147,3 +147,25 @@ def test_get_by_page_sets_next_cursor_none_when_no_more():
     result = service.get_by_page(after="Q098", limit=10)
 
     assert result == {"data": items, "next_cursor": None, "has_more": False}
+
+
+def test_create_quote_passes_answers_to_repository():
+    service = _service_with_mock_repo()
+    service.quote_repository.get_quotes.return_value = []
+    quote = _quote_create()
+    quote.answers = [QuestionAnswerInput(question_id=4, answer="No")]
+
+    service.create_quote(quote)
+
+    saved_document = service.quote_repository.save_quote.call_args[0][0]
+    assert saved_document["answers"] == [{"question_id": 4, "answer": "No"}]
+
+
+def test_create_quote_leaves_answers_unset_when_not_supplied():
+    service = _service_with_mock_repo()
+    service.quote_repository.get_quotes.return_value = []
+
+    service.create_quote(_quote_create())
+
+    saved_document = service.quote_repository.save_quote.call_args[0][0]
+    assert saved_document["answers"] is None

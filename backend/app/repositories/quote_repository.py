@@ -1,8 +1,14 @@
 from sqlalchemy import Select, select
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.database.database import SessionLocal
-from app.models.quote_model import Applicant, ProductCatalog, Quote, QuestionSet
+from app.models.quote_model import (
+    Applicant,
+    ProductCatalog,
+    Quote,
+    QuoteAnswer,
+    QuestionSet,
+)
 
 
 class UnknownProductIdError(Exception):
@@ -11,7 +17,67 @@ class UnknownProductIdError(Exception):
         super().__init__(f"Unknown product_id: {product_id}")
 
 
+class UnknownQuestionIdError(Exception):
+    def __init__(self, question_id: int):
+        self.question_id = question_id
+        super().__init__(f"Question {question_id} is not part of this product's questions")
+
+
 class QuoteRepository:
+
+    def _question_documents(self, quote: Quote) -> list[dict]:
+        if quote.answers:
+            return [
+                {
+                    "question_id": answer.question_id,
+                    "question_label": answer.question.question_label,
+                    "default_answer": answer.default_answer,
+                    "answer": answer.answer,
+                }
+                for answer in quote.answers
+            ]
+
+        # Quotes saved before answers were stored: show the product's questions
+        # answered with their defaults.
+        questions = quote.product.question_set.questions_set if quote.product.question_set else []
+        return [
+            {
+                "question_id": question.question_id,
+                "question_label": question.question_label,
+                "default_answer": question.default_answer,
+                "answer": question.default_answer,
+            }
+            for question in sorted(questions, key=lambda q: q.question_id)
+        ]
+
+    def _build_answers(
+        self, db: Session, product_id: int, provided: list[dict] | None
+    ) -> list[QuoteAnswer]:
+        """One answer row per question in the product's question set: the
+        provided answer if there is one, otherwise the catalog default."""
+        question_set = (
+            db.execute(select(QuestionSet).where(QuestionSet.product_id == product_id))
+            .scalars()
+            .first()
+        )
+        questions = sorted(
+            question_set.questions_set if question_set else [],
+            key=lambda q: q.question_id,
+        )
+
+        given = {item["question_id"]: item["answer"] for item in provided or []}
+        unknown = set(given) - {question.question_id for question in questions}
+        if unknown:
+            raise UnknownQuestionIdError(min(unknown))
+
+        return [
+            QuoteAnswer(
+                question_id=question.question_id,
+                default_answer=question.default_answer,
+                answer=given.get(question.question_id, question.default_answer),
+            )
+            for question in questions
+        ]
 
     def _to_document(self, quote: Quote) -> dict:
         return {
@@ -26,13 +92,7 @@ class QuoteRepository:
                 "phone": quote.applicant.phone,
                 "date_of_birth": quote.applicant.dob,
             },
-            "question_set": [
-                {
-                    "question_id": question.question_id,
-                    "question_label": question.question_label,
-                }
-                for question in quote.product.question_set.questions_set
-            ],
+            "question_set": self._question_documents(quote),
             "created_at": quote.created_at,
             "updated_at": quote.updated_at,
         }
@@ -43,6 +103,7 @@ class QuoteRepository:
             joinedload(Quote.product)
             .joinedload(ProductCatalog.question_set)
             .joinedload(QuestionSet.questions_set),
+            selectinload(Quote.answers).joinedload(QuoteAnswer.question),
         )
 
     def _ensure_product_exists(self, db: Session, product_id: int) -> None:
@@ -106,9 +167,12 @@ class QuoteRepository:
                     created_at=quote_document["created_at"],
                     updated_at=quote_document["updated_at"],
                 )
+                quote.answers = self._build_answers(
+                    db, quote_document["product_id"], quote_document.get("answers")
+                )
                 db.add(quote)
                 db.commit()
-            except UnknownProductIdError:
+            except (UnknownProductIdError, UnknownQuestionIdError):
                 db.rollback()
                 raise
 
@@ -123,9 +187,18 @@ class QuoteRepository:
                 return None
 
             try:
+                product_changed = False
                 if "product_id" in updates:
                     self._ensure_product_exists(db, updates["product_id"])
+                    product_changed = quote.product_id != updates["product_id"]
                     quote.product_id = updates["product_id"]
+
+                # Rebuild the answers when they're supplied, or when a new
+                # product brings a different set of questions.
+                if updates.get("answers") is not None or product_changed:
+                    quote.answers = self._build_answers(
+                        db, quote.product_id, updates.get("answers")
+                    )
 
                 applicant_data = updates.get("applicant")
                 if applicant_data:
@@ -137,7 +210,7 @@ class QuoteRepository:
                     quote.applicant.dob = applicant_data["date_of_birth"]
 
                 db.commit()
-            except UnknownProductIdError:
+            except (UnknownProductIdError, UnknownQuestionIdError):
                 db.rollback()
                 raise
 
