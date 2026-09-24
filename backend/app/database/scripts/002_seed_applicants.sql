@@ -3,7 +3,7 @@
 -- reference number supplied here, not the primary key.
 
 INSERT INTO applicant (applicant_ref_id, first_name, last_name, email, phone, dob) VALUES
-(1001, 'John', 'Smith', 'john.smith@example.com', '7700900123', '1990-03-22'),
+(1001, 'Quote', 'Admin', 'quote.admin@gmail.com', '123-456-7890', '1980-01-01'),
 (1002, 'Emily', 'Clark', 'emily.clark@example.com', '7700900456', '1985-11-02'),
 (1003, 'Test', 'User', 'test.user@example.com', '7700900789', '1995-07-15'),
 (1004, 'Michael', 'Brown', 'michael.brown@example.com', '7700900111', '1988-01-19'),

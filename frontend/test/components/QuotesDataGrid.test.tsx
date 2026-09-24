@@ -1,13 +1,27 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QuotesDataGrid } from '../../src/components/QuotesDataGrid'
-import { getQuotes } from '../../src/api/quotes'
+import { deleteQuote, getQuotes } from '../../src/api/quotes'
 import type { QuoteDto } from '../../src/types/quote_model'
 
 jest.mock('../../src/api/quotes', () => ({
   getQuotes: jest.fn(),
+  deleteQuote: jest.fn(),
 }))
 
 const mockedGetQuotes = jest.mocked(getQuotes)
+const mockedDeleteQuote = jest.mocked(deleteQuote)
+
+function renderGrid() {
+  return render(
+    <MemoryRouter initialEntries={['/quotes']}>
+      <Routes>
+        <Route path="/quotes" element={<QuotesDataGrid />} />
+        <Route path="/quotes/:quoteId/edit" element={<div>Edit page stub</div>} />
+      </Routes>
+    </MemoryRouter>,
+  )
+}
 
 const sampleQuote: QuoteDto = {
   id: 'Q001',
@@ -35,12 +49,13 @@ const otherQuote: QuoteDto = {
 describe('QuotesDataGrid', () => {
   afterEach(() => {
     mockedGetQuotes.mockReset()
+    mockedDeleteQuote.mockReset()
   })
 
   it('renders quote rows once loaded', async () => {
     mockedGetQuotes.mockResolvedValue([sampleQuote])
 
-    render(<QuotesDataGrid />)
+    renderGrid()
 
     expect(await screen.findByText('Q001')).toBeInTheDocument()
     expect(screen.getByText('Jane Doe')).toBeInTheDocument()
@@ -51,7 +66,7 @@ describe('QuotesDataGrid', () => {
   it('renders an empty grid with no rows when there are no quotes', async () => {
     mockedGetQuotes.mockResolvedValue([])
 
-    render(<QuotesDataGrid />)
+    renderGrid()
 
     await waitFor(() => expect(mockedGetQuotes).toHaveBeenCalledTimes(1))
     expect(await screen.findByText('No rows')).toBeInTheDocument()
@@ -60,7 +75,7 @@ describe('QuotesDataGrid', () => {
   it('shows an error message when the request fails', async () => {
     mockedGetQuotes.mockRejectedValue(new Error('Network down'))
 
-    render(<QuotesDataGrid />)
+    renderGrid()
 
     expect(
       await screen.findByText(/Couldn't load quotes: Network down/),
@@ -70,7 +85,7 @@ describe('QuotesDataGrid', () => {
   it('provides a quick-filter search box for filtering records', async () => {
     mockedGetQuotes.mockResolvedValue([sampleQuote, otherQuote])
 
-    render(<QuotesDataGrid />)
+    renderGrid()
 
     await screen.findByText('Jane Doe')
 
@@ -79,5 +94,49 @@ describe('QuotesDataGrid', () => {
     // up and rendered, i.e. that a user genuinely has a way to filter.
     expect(screen.getByRole('searchbox')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /show filters/i })).toBeInTheDocument()
+  })
+
+  it('navigates to the edit page when Edit is clicked', async () => {
+    mockedGetQuotes.mockResolvedValue([sampleQuote])
+
+    renderGrid()
+
+    await screen.findByText('Q001')
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+
+    expect(await screen.findByText('Edit page stub')).toBeInTheDocument()
+  })
+
+  it('closes the confirm dialog without deleting on Cancel', async () => {
+    mockedGetQuotes.mockResolvedValue([sampleQuote])
+
+    renderGrid()
+
+    await screen.findByText('Q001')
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(mockedDeleteQuote).not.toHaveBeenCalled()
+    expect(screen.getByText('Q001')).toBeInTheDocument()
+  })
+
+  it('deletes the quote and removes the row on OK', async () => {
+    mockedGetQuotes.mockResolvedValue([sampleQuote, otherQuote])
+    mockedDeleteQuote.mockResolvedValue(undefined)
+
+    renderGrid()
+
+    await screen.findByText('Q001')
+    fireEvent.click(screen.getAllByRole('button', { name: 'Delete' })[0])
+
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.click(within(dialog).getByRole('button', { name: 'OK' }))
+
+    await waitFor(() => expect(mockedDeleteQuote).toHaveBeenCalledWith('Q001'))
+    await waitFor(() => expect(screen.queryByText('Q001')).not.toBeInTheDocument())
+    expect(screen.getByText('Q002')).toBeInTheDocument()
   })
 })

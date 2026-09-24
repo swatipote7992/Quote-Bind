@@ -30,3 +30,9 @@ export interface QuoteDto {
   created_at: string
   updated_at: string
 }
+
+// Request body for POST /quotes/ and PUT /quotes/{id}.
+export interface QuoteCreateDto {
+  product_id: number
+  applicant: ApplicantDto
+}
