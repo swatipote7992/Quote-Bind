@@ -1,5 +1,6 @@
 from fastapi import APIRouter, status
 
+from app.schemas.question_catalog import QuestionCatalogResponse
 from app.schemas.product_catalog import ProductCatalogCreate, ProductCatalogResponse
 from app.services.product_service import ProductService
 
@@ -14,6 +15,11 @@ async def get_products():
 @router.get("/{product_id}", response_model=ProductCatalogResponse)
 async def get_by_id(product_id: int):
     return ProductService().get_by_id(product_id)
+
+
+@router.get("/{product_id}/questions", response_model=list[QuestionCatalogResponse])
+async def get_questions(product_id: int):
+    return ProductService().get_questions(product_id)
 
 
 @router.post("/", response_model=ProductCatalogResponse, status_code=status.HTTP_201_CREATED)

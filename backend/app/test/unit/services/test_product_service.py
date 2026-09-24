@@ -39,6 +39,28 @@ def test_get_products_returns_all_products():
     assert service.get_products() == products
 
 
+def test_get_questions_raises_404_when_product_missing():
+    service = _service_with_mock_repo()
+    service.product_repository.get_by_id.return_value = None
+
+    with pytest.raises(HTTPException) as exc:
+        service.get_questions(9999999)
+
+    assert exc.value.status_code == 404
+    service.product_repository.get_questions.assert_not_called()
+
+
+def test_get_questions_returns_questions_for_existing_product():
+    service = _service_with_mock_repo()
+    service.product_repository.get_by_id.return_value = {
+        "product_id": 1, "product_label": "Audi", "isActive": True
+    }
+    questions = [{"question_id": 1, "question_label": "Q?", "default_answer": "Yes"}]
+    service.product_repository.get_questions.return_value = questions
+
+    assert service.get_questions(1) == questions
+
+
 def test_get_by_label_raises_404_when_missing():
     service = _service_with_mock_repo()
     service.product_repository.get_by_label.return_value = None

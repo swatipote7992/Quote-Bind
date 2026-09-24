@@ -18,6 +18,10 @@ class ProductService:
             )
         return product
 
+    def get_questions(self, product_id: int):
+        self.get_by_id(product_id)
+        return self.product_repository.get_questions(product_id)
+
     def get_by_label(self, label:str):
         product = self.product_repository.get_by_label(label)
         if not product:

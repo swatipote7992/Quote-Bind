@@ -1,5 +1,6 @@
 import pytest
 
+from app.models.quote_model import QuestionCatalog, QuestionSet, question_array
 from app.repositories.product_repository import ProductRepository
 
 pytestmark = pytest.mark.usefixtures("db_session")
@@ -75,3 +76,42 @@ def test_delete_returns_true_and_removes_row():
 def test_delete_returns_false_when_missing():
     repo = ProductRepository()
     assert repo.delete(999) is False
+
+
+def test_get_questions_returns_only_the_products_question_set_questions(db_session):
+    repo = ProductRepository()
+    audi = repo.create("Audi", True)
+    bmw = repo.create("BMW", True)
+
+    with db_session() as db:
+        db.add_all(
+            [
+                QuestionCatalog(question_id=1, question_label="Q1", default_answer="Yes"),
+                QuestionCatalog(question_id=2, question_label="Q2", default_answer="No"),
+                QuestionCatalog(question_id=3, question_label="Q3", default_answer="Yes"),
+                QuestionSet(id="QSAU", label="Audi", product_id=audi["product_id"]),
+                QuestionSet(id="QSBM", label="BMW", product_id=bmw["product_id"]),
+            ]
+        )
+        db.flush()
+        db.execute(
+            question_array.insert(),
+            [
+                {"question_set_id": "QSAU", "question_id": 3},
+                {"question_set_id": "QSAU", "question_id": 1},
+                {"question_set_id": "QSBM", "question_id": 2},
+            ],
+        )
+        db.commit()
+
+    assert repo.get_questions(audi["product_id"]) == [
+        {"question_id": 1, "question_label": "Q1", "default_answer": "Yes"},
+        {"question_id": 3, "question_label": "Q3", "default_answer": "Yes"},
+    ]
+
+
+def test_get_questions_returns_empty_list_when_product_has_no_question_set():
+    repo = ProductRepository()
+    created = repo.create("Audi", True)
+
+    assert repo.get_questions(created["product_id"]) == []

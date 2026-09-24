@@ -5,15 +5,20 @@ import {
   Box,
   Button,
   CircularProgress,
+  Divider,
+  List,
+  ListItem,
+  ListItemText,
   MenuItem,
   Paper,
   Stack,
   TextField,
   Typography,
 } from '@mui/material'
-import { getProducts } from '../api/products'
+import { getProductQuestions, getProducts } from '../api/products'
 import { createQuote, getQuote, updateQuote } from '../api/quotes'
 import type { ProductDto } from '../types/product_model'
+import type { QuestionDto } from '../types/question_model'
 import type { QuoteCreateDto } from '../types/quote_model'
 
 interface FormValues {
@@ -26,14 +31,22 @@ interface FormValues {
   date_of_birth: string
 }
 
-const emptyValues: FormValues = {
+// New quotes start with this applicant pre-filled (same as the first seeded
+// applicant); every field stays editable.
+const defaultValues: FormValues = {
   product_id: '',
-  applicant_id: '',
-  first_name: '',
-  last_name: '',
-  email: '',
-  phone: '',
-  date_of_birth: '',
+  applicant_id: '1001',
+  first_name: 'Quote',
+  last_name: 'Admin',
+  email: 'quote.admin@gmail.com',
+  phone: '123-456-7890',
+  date_of_birth: '1980-01-01',
+}
+
+interface QuestionsResult {
+  productId: string
+  questions: QuestionDto[]
+  error: string | null
 }
 
 const today = new Date().toISOString().slice(0, 10)
@@ -57,11 +70,12 @@ export function QuoteFormPage() {
   const navigate = useNavigate()
   const isEdit = quoteId !== undefined
 
-  const [values, setValues] = useState<FormValues>(emptyValues)
+  const [values, setValues] = useState<FormValues>(defaultValues)
   const [products, setProducts] = useState<ProductDto[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [questionsResult, setQuestionsResult] = useState<QuestionsResult | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -95,6 +109,38 @@ export function QuoteFormPage() {
       cancelled = true
     }
   }, [quoteId])
+
+  // Load the selected product's questions (question_set -> question_array ->
+  // question_catalog, resolved by the API) whenever the product changes.
+  useEffect(() => {
+    if (!values.product_id) return
+
+    let cancelled = false
+    const productId = values.product_id
+
+    getProductQuestions(Number(productId))
+      .then((questions) => {
+        if (!cancelled) setQuestionsResult({ productId, questions, error: null })
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setQuestionsResult({
+            productId,
+            questions: [],
+            error: err instanceof Error ? err.message : 'Failed to load questions',
+          })
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [values.product_id])
+
+  const questionsLoading =
+    values.product_id !== '' && questionsResult?.productId !== values.product_id
+  const questions =
+    questionsResult?.productId === values.product_id ? questionsResult : null
 
   const handleChange =
     (field: keyof FormValues) => (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -204,6 +250,42 @@ export function QuoteFormPage() {
                   htmlInput: { max: today },
                 }}
               />
+
+              {values.product_id && (
+                <Box>
+                  <Divider sx={{ mb: 2 }} />
+                  <Typography variant="h2" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+                    Questions
+                  </Typography>
+                  {questionsLoading && (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                      <CircularProgress size={24} aria-label="Loading questions" />
+                    </Box>
+                  )}
+                  {questions?.error && (
+                    <Alert severity="error" sx={{ mt: 1 }}>
+                      Couldn't load questions: {questions.error}
+                    </Alert>
+                  )}
+                  {questions && !questions.error && questions.questions.length === 0 && (
+                    <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
+                      This product has no questions.
+                    </Typography>
+                  )}
+                  {questions && questions.questions.length > 0 && (
+                    <List dense>
+                      {questions.questions.map((question) => (
+                        <ListItem key={question.question_id} disableGutters>
+                          <ListItemText
+                            primary={question.question_label}
+                            secondary={`Default answer: ${question.default_answer}`}
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  )}
+                </Box>
+              )}
 
               <Stack direction="row" spacing={2} sx={{ justifyContent: 'flex-end' }}>
                 <Button variant="outlined" onClick={() => navigate('/quotes')}>

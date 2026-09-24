@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QuoteFormPage } from '../../src/pages/QuoteFormPage'
 import { createQuote, getQuote, updateQuote } from '../../src/api/quotes'
-import { getProducts } from '../../src/api/products'
+import { getProductQuestions, getProducts } from '../../src/api/products'
 import type { QuoteDto } from '../../src/types/quote_model'
 
 jest.mock('../../src/api/quotes', () => ({
@@ -12,12 +12,14 @@ jest.mock('../../src/api/quotes', () => ({
 }))
 jest.mock('../../src/api/products', () => ({
   getProducts: jest.fn(),
+  getProductQuestions: jest.fn(),
 }))
 
 const mockedCreateQuote = jest.mocked(createQuote)
 const mockedGetQuote = jest.mocked(getQuote)
 const mockedUpdateQuote = jest.mocked(updateQuote)
 const mockedGetProducts = jest.mocked(getProducts)
+const mockedGetProductQuestions = jest.mocked(getProductQuestions)
 
 const existingQuote: QuoteDto = {
   id: 'Q001',
@@ -53,10 +55,47 @@ describe('QuoteFormPage', () => {
     mockedGetProducts.mockResolvedValue([
       { product_id: 1, product_label: 'Home', isActive: true },
     ])
+    mockedGetProductQuestions.mockResolvedValue([
+      { question_id: 1, question_label: 'Are you 18 years old?', default_answer: 'Yes' },
+      { question_id: 4, question_label: 'Do you hold a valid UK driving license?', default_answer: 'Yes' },
+    ])
   })
 
   afterEach(() => {
     jest.resetAllMocks()
+  })
+
+  it('pre-fills the applicant as Quote Admin on a new quote', async () => {
+    renderAt('/quotes/new')
+
+    expect(await screen.findByDisplayValue('Quote')).toBeInTheDocument()
+    expect(screen.getByLabelText(/last name/i)).toHaveValue('Admin')
+    expect(screen.getByLabelText(/email/i)).toHaveValue('quote.admin@gmail.com')
+    expect(screen.getByLabelText(/phone/i)).toHaveValue('123-456-7890')
+    expect(screen.getByLabelText(/date of birth/i)).toHaveValue('1980-01-01')
+    expect(screen.getByLabelText(/applicant id/i)).toHaveValue(1001)
+    expect(screen.queryByText('Questions')).not.toBeInTheDocument()
+  })
+
+  it("lists the selected product's questions", async () => {
+    renderAt('/quotes/new')
+
+    fireEvent.mouseDown(await screen.findByRole('combobox', { name: /product/i }))
+    fireEvent.click(await screen.findByRole('option', { name: 'Home' }))
+
+    expect(await screen.findByText('Are you 18 years old?')).toBeInTheDocument()
+    expect(screen.getByText('Do you hold a valid UK driving license?')).toBeInTheDocument()
+    expect(mockedGetProductQuestions).toHaveBeenCalledWith(1)
+  })
+
+  it('shows an error when the questions fail to load', async () => {
+    mockedGetProductQuestions.mockRejectedValue(new Error('boom'))
+    renderAt('/quotes/new')
+
+    fireEvent.mouseDown(await screen.findByRole('combobox', { name: /product/i }))
+    fireEvent.click(await screen.findByRole('option', { name: 'Home' }))
+
+    expect(await screen.findByText(/Couldn't load questions: boom/)).toBeInTheDocument()
   })
 
   it('creates a new quote and returns to the list', async () => {
