@@ -58,6 +58,18 @@ class Applicant(Base):
     phone = Column(String, nullable=False)
     dob = Column(String, nullable=False)
 
+class QuoteAnswer(Base):
+    __tablename__ = "quote_answer"
+
+    quote_id = Column(String, ForeignKey("quotes.id"), primary_key=True)
+    question_id = Column(
+        Integer, ForeignKey("question_catalog.question_id"), primary_key=True
+    )
+    default_answer = Column(String, nullable=False)
+    answer = Column(String, nullable=False)
+    question = relationship("QuestionCatalog")
+
+
 class Quote(Base):
     __tablename__ = "quotes"
 
@@ -70,3 +82,6 @@ class Quote(Base):
 
     applicant = relationship("Applicant", uselist=False)
     product = relationship("ProductCatalog")
+    answers = relationship(
+        "QuoteAnswer", cascade="all, delete-orphan", order_by=QuoteAnswer.question_id
+    )

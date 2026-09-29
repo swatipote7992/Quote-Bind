@@ -362,6 +362,67 @@ diagnostics — not errors. Because of the startup cost, leave this env var
 unset for local development unless you're actively testing against a real
 Application Insights resource.
 
+```
+
+## Advanced Features
+
+### Product questions — `GET /products/{product_id}/questions`
+
+Resolves the full list of questions for a product: `product_catalog` →
+its `question_set` → `question_array` → `question_catalog`. Returns the
+same shape as `GET /questions/{question_id}`, one entry per question in
+the product's set, ordered by `question_id`; `404`s with
+`{"detail": "Product not found"}` for an unknown `product_id`.
+
+```bash
+curl http://127.0.0.1:8000/products/1/questions
+```
+
+```json
+[
+  { "question_id": 1, "question_label": "Are you 18 years old?", "default_answer": "Yes" },
+  { "question_id": 2, "question_label": "Are you UK resident?", "default_answer": "Yes" }
+]
+```
+
+The frontend's New/Edit Quote page calls this as soon as a product is
+selected, to render that product's questions.
+
+### Per-quote question answers
+
+Quotes store an answer per question, not just the question list. A
+`quote_answer` table holds, per `(quote_id, question_id)`, the catalog's
+`default_answer` at save time alongside the `answer` actually given.
+
+`POST /quotes/` and `PUT /quotes/{quote_id}` accept an optional
+`answers` array:
+
+```json
+{
+  "product_id": 1,
+  "applicant": { "...": "..." },
+  "answers": [
+    { "question_id": 1, "answer": "No" }
+  ]
+}
+```
+
+- Any question in the product's question set left out of `answers` (or
+  the whole array omitted) is saved with its catalog default answer.
+- An `answer` for a `question_id` that isn't part of the product's
+  question set is rejected with `422` and
+  `{"detail": "Question <id> is not part of this product's questions"}`.
+- Changing a quote's `product_id` on update re-resolves its questions
+  and resets every answer to the new product's defaults, unless
+  `answers` are supplied in the same request.
+- Deleting a quote deletes its answers too.
+
+`question_set` in quote responses (`GET`/`POST`/`PUT /quotes/...`) now
+includes both the default and the given answer per question:
+
+```json
+{ "question_id": 1, "question_label": "Are you 18 years old?", "default_answer": "Yes", "answer": "No" }
+
 ## Project structure
 
 ```

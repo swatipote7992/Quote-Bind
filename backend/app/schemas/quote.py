@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from datetime import date,datetime
 from enum import Enum
 
@@ -18,9 +18,15 @@ class Applicant(BaseModel):
             raise ValueError("Date of birth cannot be in the future.")
         return value
 
+class QuestionAnswerInput(BaseModel):
+    question_id: int
+    answer: str = Field(min_length=1)
+
 class QuestionResponse(BaseModel):
     question_id: int
     question_label: str
+    default_answer: str
+    answer: str
 
 class Status(Enum):
     new = "New"
@@ -32,6 +38,9 @@ class Status(Enum):
 class QuoteCreate(BaseModel):
     product_id: int
     applicant: Applicant
+    # Answers for the product's questions. Questions left out (or the whole list
+    # omitted) fall back to the catalog default answer.
+    answers: list[QuestionAnswerInput] | None = None
 
 
 class QuoteResponse(BaseModel):

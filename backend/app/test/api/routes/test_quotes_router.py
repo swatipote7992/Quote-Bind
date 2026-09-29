@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 from app.api.exception_handlers import register_exception_handler
 from app.api.routes.quotes_router import router as quotes_router
-from app.repositories.quote_repository import UnknownProductIdError
+from app.repositories.quote_repository import UnknownProductIdError, UnknownQuestionIdError
 
 
 @pytest.fixture
@@ -157,3 +157,50 @@ def test_delete_quote_returns_204(client, mock_service):
 
     assert response.status_code == 204
     mock_service.delete_quote.assert_called_once_with("Q001")
+
+
+def test_create_quote_accepts_answers(client, mock_service):
+    mock_service.create_quote.return_value = _quote_json()
+
+    response = client.post(
+        "/quotes/",
+        json={
+            "product_id": 1,
+            "applicant": _applicant_json(),
+            "answers": [{"question_id": 4, "answer": "No"}],
+        },
+    )
+
+    assert response.status_code == 201
+    created = mock_service.create_quote.call_args[0][0]
+    assert [(a.question_id, a.answer) for a in created.answers] == [(4, "No")]
+
+
+def test_create_quote_rejects_empty_answer(client, mock_service):
+    response = client.post(
+        "/quotes/",
+        json={
+            "product_id": 1,
+            "applicant": _applicant_json(),
+            "answers": [{"question_id": 4, "answer": ""}],
+        },
+    )
+
+    assert response.status_code == 422
+    mock_service.create_quote.assert_not_called()
+
+
+def test_create_quote_returns_422_via_global_handler_on_unknown_question(client, mock_service):
+    mock_service.create_quote.side_effect = UnknownQuestionIdError(99)
+
+    response = client.post(
+        "/quotes/",
+        json={
+            "product_id": 1,
+            "applicant": _applicant_json(),
+            "answers": [{"question_id": 99, "answer": "No"}],
+        },
+    )
+
+    assert response.status_code == 422
+    assert "99" in response.json()["detail"]
