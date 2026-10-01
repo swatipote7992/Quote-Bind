@@ -12,6 +12,11 @@ Two independent projects in one repo, run and tested separately:
 The frontend talks to the backend over HTTP (`VITE_API_BASE_URL`, default
 `http://localhost:8000`); there's no shared build tooling between them.
 
+Please read if you need more info:
+
+- Backend (setup, API reference, deployment): @README.md
+- Frontend (formatting, linting, Vite/React setup): @frontend/README.md
+
 ## Commands
 
 ### Backend (run from `backend/`)

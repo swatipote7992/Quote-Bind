@@ -366,8 +366,6 @@ diagnostics — not errors. Because of the startup cost, leave this env var
 unset for local development unless you're actively testing against a real
 Application Insights resource.
 
-```
-
 ## Advanced Features
 
 ### Product questions — `GET /products/{product_id}/questions`
@@ -426,6 +424,7 @@ includes both the default and the given answer per question:
 
 ```json
 { "question_id": 1, "question_label": "Are you 18 years old?", "default_answer": "Yes", "answer": "No" }
+```
 
 ## Deployment
 
