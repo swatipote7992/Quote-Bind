@@ -1,46 +1,132 @@
 import { useEffect, useState } from 'react'
-import { Alert, Box } from '@mui/material'
+import { useNavigate } from 'react-router-dom'
+import {
+  Alert,
+  Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+} from '@mui/material'
 import { DataGrid, GridToolbar, type GridColDef } from '@mui/x-data-grid'
-import { getQuotes } from '../api/quotes'
+import { deleteQuote, getQuotes } from '../api/quotes'
 import type { QuoteDto } from '../types/quote_model'
 
-const columns: GridColDef<QuoteDto>[] = [
-  { field: 'id', headerName: 'Quote ID', width: 110 },
-  { field: 'status', headerName: 'Status', width: 120 },
-  { field: 'product_id', headerName: 'Product', width: 100, type: 'number' },
-  {
-    field: 'applicant_name',
-    headerName: 'Applicant',
-    flex: 1,
-    minWidth: 180,
-    valueGetter: (_value, row) =>
-      `${row.applicant.first_name} ${row.applicant.last_name}`,
-  },
-  {
-    field: 'applicant_email',
-    headerName: 'Email',
-    flex: 1,
-    minWidth: 200,
-    valueGetter: (_value, row) => row.applicant.email,
-  },
-  {
-    field: 'applicant_phone',
-    headerName: 'Phone',
-    width: 140,
-    valueGetter: (_value, row) => row.applicant.phone,
-  },
-  {
-    field: 'created_at',
-    headerName: 'Created',
-    width: 180,
-    valueFormatter: (value: string) => new Date(value).toLocaleString(),
-  },
-]
+function buildColumns(
+  onViewAnswers: (quote: QuoteDto) => void,
+  onEdit: (quote: QuoteDto) => void,
+  onDelete: (quote: QuoteDto) => void,
+): GridColDef<QuoteDto>[] {
+  return [
+    {
+      field: 'id',
+      headerName: 'Quote ID',
+      width: 90,
+      // Numeric-aware, so Q1000 sorts after Q999 rather than before it.
+      sortComparator: (a: string, b: string) =>
+        a.localeCompare(b, undefined, { numeric: true }),
+    },
+    { field: 'status', headerName: 'Status', width: 100 },
+    { field: 'product_id', headerName: 'Product', width: 85, type: 'number' },
+    {
+      field: 'applicant_name',
+      headerName: 'Applicant',
+      flex: 1,
+      minWidth: 125,
+      valueGetter: (_value, row) =>
+        `${row.applicant.first_name} ${row.applicant.last_name}`,
+    },
+    {
+      field: 'applicant_email',
+      headerName: 'Email',
+      flex: 1,
+      minWidth: 150,
+      valueGetter: (_value, row) => row.applicant.email,
+    },
+    {
+      field: 'applicant_phone',
+      headerName: 'Phone',
+      width: 115,
+      valueGetter: (_value, row) => row.applicant.phone,
+    },
+    {
+      field: 'created_at',
+      headerName: 'Created',
+      width: 140,
+      valueFormatter: (value: string) =>
+        new Date(value).toLocaleString(undefined, {
+          dateStyle: 'short',
+          timeStyle: 'short',
+        }),
+    },
+    {
+      field: 'question_set',
+      headerName: 'Answers',
+      width: 110,
+      sortable: false,
+      // Plain-text form of the answers, used by quick filter and export.
+      valueGetter: (_value, row) =>
+        row.question_set
+          .map((item) => `${item.question_label}: ${item.answer}`)
+          .join('; '),
+      renderCell: ({ row }) =>
+        row.question_set.length === 0 ? (
+          '—'
+        ) : (
+          <Button size="small" onClick={() => onViewAnswers(row)}>
+            View ({row.question_set.length})
+          </Button>
+        ),
+    },
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      width: 165,
+      sortable: false,
+      filterable: false,
+      disableColumnMenu: true,
+      disableExport: true,
+      renderCell: ({ row }) => (
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{ alignItems: 'center', height: '100%' }}
+        >
+          <Button size="small" variant="outlined" onClick={() => onEdit(row)}>
+            Edit
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            color="error"
+            onClick={() => onDelete(row)}
+          >
+            Delete
+          </Button>
+        </Stack>
+      ),
+    },
+  ]
+}
 
 export function QuotesDataGrid() {
+  const navigate = useNavigate()
   const [quotes, setQuotes] = useState<QuoteDto[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [quoteToView, setQuoteToView] = useState<QuoteDto | null>(null)
+  const [quoteToDelete, setQuoteToDelete] = useState<QuoteDto | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -63,6 +149,35 @@ export function QuotesDataGrid() {
     }
   }, [])
 
+  const closeDeleteDialog = () => {
+    setQuoteToDelete(null)
+    setDeleteError(null)
+  }
+
+  const confirmDelete = async () => {
+    if (!quoteToDelete) return
+
+    setDeleting(true)
+    setDeleteError(null)
+    try {
+      await deleteQuote(quoteToDelete.id)
+      setQuotes((prev) => prev.filter((quote) => quote.id !== quoteToDelete.id))
+      setQuoteToDelete(null)
+    } catch (err: unknown) {
+      setDeleteError(
+        err instanceof Error ? err.message : 'Failed to delete quote',
+      )
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const columns = buildColumns(
+    (quote) => setQuoteToView(quote),
+    (quote) => navigate(`/quotes/${encodeURIComponent(quote.id)}/edit`),
+    (quote) => setQuoteToDelete(quote),
+  )
+
   if (error) {
     return (
       <Alert severity="error" className="w-full">
@@ -79,6 +194,8 @@ export function QuotesDataGrid() {
         loading={loading}
         initialState={{
           pagination: { paginationModel: { pageSize: 10 } },
+          // Newest quotes first.
+          sorting: { sortModel: [{ field: 'id', sort: 'desc' }] },
         }}
         pageSizeOptions={[10, 25, 50]}
         disableRowSelectionOnClick
@@ -87,6 +204,75 @@ export function QuotesDataGrid() {
         slots={{ toolbar: GridToolbar }}
         slotProps={{ toolbar: { showQuickFilter: true } }}
       />
+
+      <Dialog
+        open={quoteToView !== null}
+        onClose={() => setQuoteToView(null)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Answers for quote {quoteToView?.id}</DialogTitle>
+        <DialogContent>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Question</TableCell>
+                  <TableCell>Default answer</TableCell>
+                  <TableCell>Answer</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {quoteToView?.question_set.map((item) => (
+                  <TableRow key={item.question_id}>
+                    <TableCell>{item.question_label}</TableCell>
+                    <TableCell>{item.default_answer}</TableCell>
+                    <TableCell
+                      sx={{
+                        fontWeight:
+                          item.answer !== item.default_answer ? 600 : 400,
+                      }}
+                    >
+                      {item.answer}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setQuoteToView(null)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={quoteToDelete !== null} onClose={closeDeleteDialog}>
+        <DialogTitle>Delete quote?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete quote {quoteToDelete?.id}? This
+            cannot be undone.
+          </DialogContentText>
+          {deleteError && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {deleteError}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeDeleteDialog} disabled={deleting}>
+            Cancel
+          </Button>
+          <Button
+            onClick={confirmDelete}
+            color="error"
+            variant="contained"
+            disabled={deleting}
+          >
+            OK
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }

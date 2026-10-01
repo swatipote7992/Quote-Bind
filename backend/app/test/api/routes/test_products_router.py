@@ -57,6 +57,31 @@ def test_get_by_id_propagates_404_from_service(client, mock_service):
     assert response.json() == {"detail": "Product not found"}
 
 
+def test_get_questions_returns_product_questions(client, mock_service):
+    mock_service.get_questions.return_value = [
+        {"question_id": 1, "question_label": "Are you 18 years old?", "default_answer": "Yes"}
+    ]
+
+    response = client.get("/products/1/questions")
+
+    assert response.status_code == 200
+    assert response.json() == [
+        {"question_id": 1, "question_label": "Are you 18 years old?", "default_answer": "Yes"}
+    ]
+    mock_service.get_questions.assert_called_once_with(1)
+
+
+def test_get_questions_propagates_404_from_service(client, mock_service):
+    mock_service.get_questions.side_effect = HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND, detail="Product not found"
+    )
+
+    response = client.get("/products/999/questions")
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Product not found"}
+
+
 def test_create_product_returns_201(client, mock_service):
     mock_service.create_product.return_value = {
         "product_id": 2, "product_label": "BMW", "isActive": True

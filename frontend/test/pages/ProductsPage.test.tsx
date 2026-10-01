@@ -9,7 +9,9 @@ describe('ProductsPage', () => {
   it('renders the Products heading and grid', () => {
     render(<ProductsPage />)
 
-    expect(screen.getByRole('heading', { name: 'Products' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Products' }),
+    ).toBeInTheDocument()
     expect(screen.getByTestId('products-data-grid-stub')).toBeInTheDocument()
   })
 })
