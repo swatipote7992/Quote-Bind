@@ -38,7 +38,7 @@ pytest app/test/unit/services/test_quote_service.py::test_create_quote_passes_an
 Tables are created automatically on startup (`Base.metadata.create_all` in
 `main.py`); optional seed data lives in `app/database/scripts/*.sql` and must
 be run in numeric filename order with `psql` against an empty database (see
-`backend/README.md` for the exact commands — the ids are `SERIAL` and the
+`README.md` for the exact commands — the ids are `SERIAL` and the
 scripts rely on insertion order to line up with the ids later scripts
 reference).
 
