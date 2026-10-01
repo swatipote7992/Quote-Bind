@@ -56,6 +56,8 @@ describe('QuestionsDataGrid', () => {
     await screen.findByText('Are you 18 years old?')
 
     expect(screen.getByRole('searchbox')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /show filters/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /show filters/i }),
+    ).toBeInTheDocument()
   })
 })

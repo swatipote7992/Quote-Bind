@@ -1,11 +1,7 @@
 // Mirrors app/schemas/quote.py on the backend.
 
 export type QuoteStatusDto =
-  | 'New'
-  | 'InProgress'
-  | 'Pending'
-  | 'Approved'
-  | 'Rejected'
+  'New' | 'InProgress' | 'Pending' | 'Approved' | 'Rejected'
 
 export interface ApplicantDto {
   applicant_id: number

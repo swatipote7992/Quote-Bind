@@ -13,7 +13,10 @@ export function createQuote(quote: QuoteCreateDto): Promise<QuoteDto> {
   return apiPost<QuoteDto>('/quotes/', quote)
 }
 
-export function updateQuote(id: string, quote: QuoteCreateDto): Promise<QuoteDto> {
+export function updateQuote(
+  id: string,
+  quote: QuoteCreateDto,
+): Promise<QuoteDto> {
   return apiPut<QuoteDto>(`/quotes/${encodeURIComponent(id)}`, quote)
 }
 

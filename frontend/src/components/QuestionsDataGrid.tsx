@@ -24,7 +24,9 @@ export function QuestionsDataGrid() {
       })
       .catch((err: unknown) => {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load questions')
+          setError(
+            err instanceof Error ? err.message : 'Failed to load questions',
+          )
         }
       })
       .finally(() => {

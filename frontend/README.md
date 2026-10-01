@@ -30,3 +30,12 @@ If you are developing a production application, we recommend enabling type-aware
 ```
 
 See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+
+## Formatting and linting
+
+Code formatting is handled by [Prettier](https://prettier.io) and linting by Oxlint; the two are separate tools.
+
+- Prettier config: `.prettierrc.json` (no semicolons, single quotes, 2-space indent). Files to skip are listed in `.prettierignore`.
+- `npm run format` rewrites files with Prettier.
+- `npm run format:check` verifies formatting without changing anything (useful in CI).
+- `npm run lint` runs Oxlint (config: `.oxlintrc.json`).

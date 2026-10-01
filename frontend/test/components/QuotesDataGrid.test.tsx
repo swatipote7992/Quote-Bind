@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QuotesDataGrid } from '../../src/components/QuotesDataGrid'
 import { deleteQuote, getQuotes } from '../../src/api/quotes'
@@ -17,7 +23,10 @@ function renderGrid() {
     <MemoryRouter initialEntries={['/quotes']}>
       <Routes>
         <Route path="/quotes" element={<QuotesDataGrid />} />
-        <Route path="/quotes/:quoteId/edit" element={<div>Edit page stub</div>} />
+        <Route
+          path="/quotes/:quoteId/edit"
+          element={<div>Edit page stub</div>}
+        />
       </Routes>
     </MemoryRouter>,
   )
@@ -50,7 +59,11 @@ const sampleQuote: QuoteDto = {
 const otherQuote: QuoteDto = {
   ...sampleQuote,
   id: 'Q002',
-  applicant: { ...sampleQuote.applicant, first_name: 'Mark', last_name: 'Evans' },
+  applicant: {
+    ...sampleQuote.applicant,
+    first_name: 'Mark',
+    last_name: 'Evans',
+  },
 }
 
 describe('QuotesDataGrid', () => {
@@ -117,7 +130,9 @@ describe('QuotesDataGrid', () => {
     // logic; this confirms the toolbar + quick filter are actually wired
     // up and rendered, i.e. that a user genuinely has a way to filter.
     expect(screen.getByRole('searchbox')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /show filters/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /show filters/i }),
+    ).toBeInTheDocument()
   })
 
   it('shows each question with its default answer and answer in a dialog', async () => {
@@ -129,15 +144,19 @@ describe('QuotesDataGrid', () => {
     fireEvent.click(screen.getByRole('button', { name: 'View (1)' }))
 
     const dialog = await screen.findByRole('dialog')
-    const row = within(dialog).getByRole('row', { name: /Are you 18 years old\?/ })
-    expect(within(row).getAllByRole('cell').map((cell) => cell.textContent)).toEqual([
-      'Are you 18 years old?',
-      'Yes',
-      'No',
-    ])
+    const row = within(dialog).getByRole('row', {
+      name: /Are you 18 years old\?/,
+    })
+    expect(
+      within(row)
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent),
+    ).toEqual(['Are you 18 years old?', 'Yes', 'No'])
 
     fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }))
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+    )
   })
 
   it('navigates to the edit page when Edit is clicked', async () => {
@@ -162,7 +181,9 @@ describe('QuotesDataGrid', () => {
     const dialog = await screen.findByRole('dialog')
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
 
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+    )
     expect(mockedDeleteQuote).not.toHaveBeenCalled()
     expect(screen.getByText('Q001')).toBeInTheDocument()
   })
@@ -174,14 +195,18 @@ describe('QuotesDataGrid', () => {
     renderGrid()
 
     await screen.findByText('Q001')
-    const q001Row = screen.getByText('Q001').closest('[role="row"]') as HTMLElement
+    const q001Row = screen
+      .getByText('Q001')
+      .closest('[role="row"]') as HTMLElement
     fireEvent.click(within(q001Row).getByRole('button', { name: 'Delete' }))
 
     const dialog = await screen.findByRole('dialog')
     fireEvent.click(within(dialog).getByRole('button', { name: 'OK' }))
 
     await waitFor(() => expect(mockedDeleteQuote).toHaveBeenCalledWith('Q001'))
-    await waitFor(() => expect(screen.queryByText('Q001')).not.toBeInTheDocument())
+    await waitFor(() =>
+      expect(screen.queryByText('Q001')).not.toBeInTheDocument(),
+    )
     expect(screen.getByText('Q002')).toBeInTheDocument()
   })
 })
