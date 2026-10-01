@@ -7,3 +7,4 @@ app.log
 
 .coverage
 Development-Log.docx
+frontend/package-lock.json

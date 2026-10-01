@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QuoteFormPage } from '../../src/pages/QuoteFormPage'
 import { createQuote, getQuote, updateQuote } from '../../src/api/quotes'
@@ -69,8 +75,16 @@ describe('QuoteFormPage', () => {
       { product_id: 1, product_label: 'Home', isActive: true },
     ])
     mockedGetProductQuestions.mockResolvedValue([
-      { question_id: 1, question_label: 'Are you 18 years old?', default_answer: 'Yes' },
-      { question_id: 4, question_label: 'Do you hold a valid UK driving license?', default_answer: 'Yes' },
+      {
+        question_id: 1,
+        question_label: 'Are you 18 years old?',
+        default_answer: 'Yes',
+      },
+      {
+        question_id: 4,
+        question_label: 'Do you hold a valid UK driving license?',
+        default_answer: 'Yes',
+      },
     ])
   })
 
@@ -99,21 +113,29 @@ describe('QuoteFormPage', () => {
   it("lists the selected product's questions", async () => {
     renderAt('/quotes/new')
 
-    fireEvent.mouseDown(await screen.findByRole('combobox', { name: /product/i }))
+    fireEvent.mouseDown(
+      await screen.findByRole('combobox', { name: /product/i }),
+    )
     fireEvent.click(await screen.findByRole('option', { name: 'Home' }))
 
     expect(await screen.findByText('Are you 18 years old?')).toBeInTheDocument()
-    expect(screen.getByText('Do you hold a valid UK driving license?')).toBeInTheDocument()
+    expect(
+      screen.getByText('Do you hold a valid UK driving license?'),
+    ).toBeInTheDocument()
     expect(mockedGetProductQuestions).toHaveBeenCalledWith(1)
   })
 
   it('renders each question as radio buttons with the default answer selected', async () => {
     renderAt('/quotes/new')
 
-    fireEvent.mouseDown(await screen.findByRole('combobox', { name: /product/i }))
+    fireEvent.mouseDown(
+      await screen.findByRole('combobox', { name: /product/i }),
+    )
     fireEvent.click(await screen.findByRole('option', { name: 'Home' }))
 
-    const group = await screen.findByRole('radiogroup', { name: 'Are you 18 years old?' })
+    const group = await screen.findByRole('radiogroup', {
+      name: 'Are you 18 years old?',
+    })
     expect(within(group).getByRole('radio', { name: 'Yes' })).toBeChecked()
     expect(within(group).getByRole('radio', { name: 'No' })).not.toBeChecked()
 
@@ -127,10 +149,14 @@ describe('QuoteFormPage', () => {
     mockedGetProductQuestions.mockRejectedValue(new Error('boom'))
     renderAt('/quotes/new')
 
-    fireEvent.mouseDown(await screen.findByRole('combobox', { name: /product/i }))
+    fireEvent.mouseDown(
+      await screen.findByRole('combobox', { name: /product/i }),
+    )
     fireEvent.click(await screen.findByRole('option', { name: 'Home' }))
 
-    expect(await screen.findByText(/Couldn't load questions: boom/)).toBeInTheDocument()
+    expect(
+      await screen.findByText(/Couldn't load questions: boom/),
+    ).toBeInTheDocument()
   })
 
   it('creates a new quote and returns to the list', async () => {
@@ -138,16 +164,24 @@ describe('QuoteFormPage', () => {
 
     renderAt('/quotes/new')
 
-    expect(screen.getByRole('heading', { name: 'New Quote' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'New Quote' }),
+    ).toBeInTheDocument()
 
-    fireEvent.mouseDown(await screen.findByRole('combobox', { name: /product/i }))
+    fireEvent.mouseDown(
+      await screen.findByRole('combobox', { name: /product/i }),
+    )
     fireEvent.click(await screen.findByRole('option', { name: 'Home' }))
     const driving = await screen.findByRole('radiogroup', {
       name: 'Do you hold a valid UK driving license?',
     })
     fireEvent.click(within(driving).getByRole('radio', { name: 'No' }))
-    fireEvent.change(screen.getByLabelText(/first name/i), { target: { value: 'Jane' } })
-    fireEvent.change(screen.getByLabelText(/last name/i), { target: { value: 'Doe' } })
+    fireEvent.change(screen.getByLabelText(/first name/i), {
+      target: { value: 'Jane' },
+    })
+    fireEvent.change(screen.getByLabelText(/last name/i), {
+      target: { value: 'Doe' },
+    })
     fireEvent.change(screen.getByLabelText(/email/i), {
       target: { value: 'jane.doe@example.com' },
     })
@@ -180,13 +214,19 @@ describe('QuoteFormPage', () => {
     renderAt('/quotes/Q001/edit')
 
     expect(await screen.findByDisplayValue('Jane')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Edit Quote Q001' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Edit Quote Q001' }),
+    ).toBeInTheDocument()
 
     // Saved answers win over the catalog defaults.
-    const group = await screen.findByRole('radiogroup', { name: 'Are you 18 years old?' })
+    const group = await screen.findByRole('radiogroup', {
+      name: 'Are you 18 years old?',
+    })
     expect(within(group).getByRole('radio', { name: 'No' })).toBeChecked()
 
-    fireEvent.change(screen.getByLabelText(/first name/i), { target: { value: 'Janet' } })
+    fireEvent.change(screen.getByLabelText(/first name/i), {
+      target: { value: 'Janet' },
+    })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() =>

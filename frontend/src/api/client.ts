@@ -18,7 +18,8 @@ async function apiRequest(
 ): Promise<Response> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method,
-    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+    headers:
+      body === undefined ? undefined : { 'Content-Type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
   })
 

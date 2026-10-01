@@ -9,7 +9,9 @@ describe('QuestionsPage', () => {
   it('renders the Questions heading and grid', () => {
     render(<QuestionsPage />)
 
-    expect(screen.getByRole('heading', { name: 'Questions' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Questions' }),
+    ).toBeInTheDocument()
     expect(screen.getByTestId('questions-data-grid-stub')).toBeInTheDocument()
   })
 })

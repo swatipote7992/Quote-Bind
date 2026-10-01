@@ -17,7 +17,11 @@ export function QuotesPage() {
       >
         <Typography
           variant="h1"
-          sx={{ fontSize: '1.5rem', fontWeight: 600, letterSpacing: '-0.025em' }}
+          sx={{
+            fontSize: '1.5rem',
+            fontWeight: 600,
+            letterSpacing: '-0.025em',
+          }}
         >
           Quotes
         </Typography>

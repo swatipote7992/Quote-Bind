@@ -56,6 +56,8 @@ describe('ProductsDataGrid', () => {
     await screen.findByText('Audi')
 
     expect(screen.getByRole('searchbox')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /show filters/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /show filters/i }),
+    ).toBeInTheDocument()
   })
 })

@@ -75,7 +75,9 @@ function buildColumns(
       sortable: false,
       // Plain-text form of the answers, used by quick filter and export.
       valueGetter: (_value, row) =>
-        row.question_set.map((item) => `${item.question_label}: ${item.answer}`).join('; '),
+        row.question_set
+          .map((item) => `${item.question_label}: ${item.answer}`)
+          .join('; '),
       renderCell: ({ row }) =>
         row.question_set.length === 0 ? (
           '—'
@@ -94,7 +96,11 @@ function buildColumns(
       disableColumnMenu: true,
       disableExport: true,
       renderCell: ({ row }) => (
-        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', height: '100%' }}>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{ alignItems: 'center', height: '100%' }}
+        >
           <Button size="small" variant="outlined" onClick={() => onEdit(row)}>
             Edit
           </Button>
@@ -158,7 +164,9 @@ export function QuotesDataGrid() {
       setQuotes((prev) => prev.filter((quote) => quote.id !== quoteToDelete.id))
       setQuoteToDelete(null)
     } catch (err: unknown) {
-      setDeleteError(err instanceof Error ? err.message : 'Failed to delete quote')
+      setDeleteError(
+        err instanceof Error ? err.message : 'Failed to delete quote',
+      )
     } finally {
       setDeleting(false)
     }
@@ -219,7 +227,12 @@ export function QuotesDataGrid() {
                   <TableRow key={item.question_id}>
                     <TableCell>{item.question_label}</TableCell>
                     <TableCell>{item.default_answer}</TableCell>
-                    <TableCell sx={{ fontWeight: item.answer !== item.default_answer ? 600 : 400 }}>
+                    <TableCell
+                      sx={{
+                        fontWeight:
+                          item.answer !== item.default_answer ? 600 : 400,
+                      }}
+                    >
                       {item.answer}
                     </TableCell>
                   </TableRow>

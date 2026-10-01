@@ -24,7 +24,9 @@ export function ProductsDataGrid() {
       })
       .catch((err: unknown) => {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load products')
+          setError(
+            err instanceof Error ? err.message : 'Failed to load products',
+          )
         }
       })
       .finally(() => {

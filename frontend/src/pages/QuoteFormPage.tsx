@@ -66,7 +66,9 @@ function answerOptions(question: QuestionDto, current: string): string[] {
   return [...new Set([...baseAnswerOptions, question.default_answer, current])]
 }
 
-function toAnswers(result: QuestionsResult | null): QuestionAnswerDto[] | undefined {
+function toAnswers(
+  result: QuestionsResult | null,
+): QuestionAnswerDto[] | undefined {
   if (!result || result.error) return undefined
   return result.questions.map((question) => ({
     question_id: question.question_id,
@@ -74,7 +76,10 @@ function toAnswers(result: QuestionsResult | null): QuestionAnswerDto[] | undefi
   }))
 }
 
-function toPayload(values: FormValues, answers?: QuestionAnswerDto[]): QuoteCreateDto {
+function toPayload(
+  values: FormValues,
+  answers?: QuestionAnswerDto[],
+): QuoteCreateDto {
   return {
     answers,
     product_id: Number(values.product_id),
@@ -99,13 +104,17 @@ export function QuoteFormPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [questionsResult, setQuestionsResult] = useState<QuestionsResult | null>(null)
+  const [questionsResult, setQuestionsResult] =
+    useState<QuestionsResult | null>(null)
   const [savedAnswers, setSavedAnswers] = useState<SavedAnswers | null>(null)
 
   useEffect(() => {
     let cancelled = false
 
-    Promise.all([getProducts(), quoteId ? getQuote(quoteId) : Promise.resolve(null)])
+    Promise.all([
+      getProducts(),
+      quoteId ? getQuote(quoteId) : Promise.resolve(null),
+    ])
       .then(([productList, quote]) => {
         if (cancelled) return
         setProducts(productList)
@@ -129,7 +138,9 @@ export function QuoteFormPage() {
       })
       .catch((err: unknown) => {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load the form')
+          setError(
+            err instanceof Error ? err.message : 'Failed to load the form',
+          )
         }
       })
       .finally(() => {
@@ -154,7 +165,8 @@ export function QuoteFormPage() {
         if (cancelled) return
         // Start from each question's default answer, then apply the answers
         // already saved on this quote (only while its product is unchanged).
-        const saved = savedAnswers?.productId === productId ? savedAnswers.answers : {}
+        const saved =
+          savedAnswers?.productId === productId ? savedAnswers.answers : {}
         const answers = Object.fromEntries(
           questions.map((question) => [
             question.question_id,
@@ -169,7 +181,8 @@ export function QuoteFormPage() {
             productId,
             questions: [],
             answers: {},
-            error: err instanceof Error ? err.message : 'Failed to load questions',
+            error:
+              err instanceof Error ? err.message : 'Failed to load questions',
           })
         }
       })
@@ -185,13 +198,16 @@ export function QuoteFormPage() {
     questionsResult?.productId === values.product_id ? questionsResult : null
 
   const handleChange =
-    (field: keyof FormValues) => (event: React.ChangeEvent<HTMLInputElement>) => {
+    (field: keyof FormValues) =>
+    (event: React.ChangeEvent<HTMLInputElement>) => {
       setValues((prev) => ({ ...prev, [field]: event.target.value }))
     }
 
   const handleAnswerChange = (questionId: number, answer: string) => {
     setQuestionsResult((prev) =>
-      prev ? { ...prev, answers: { ...prev.answers, [questionId]: answer } } : prev,
+      prev
+        ? { ...prev, answers: { ...prev.answers, [questionId]: answer } }
+        : prev,
     )
   }
 
@@ -218,7 +234,12 @@ export function QuoteFormPage() {
     <>
       <Typography
         variant="h1"
-        sx={{ mb: 3, fontSize: '1.5rem', fontWeight: 600, letterSpacing: '-0.025em' }}
+        sx={{
+          mb: 3,
+          fontSize: '1.5rem',
+          fontWeight: 600,
+          letterSpacing: '-0.025em',
+        }}
       >
         {isEdit ? `Edit Quote ${quoteId}` : 'New Quote'}
       </Typography>
@@ -241,7 +262,10 @@ export function QuoteFormPage() {
                 onChange={handleChange('product_id')}
               >
                 {products.map((product) => (
-                  <MenuItem key={product.product_id} value={String(product.product_id)}>
+                  <MenuItem
+                    key={product.product_id}
+                    value={String(product.product_id)}
+                  >
                     {product.product_label}
                   </MenuItem>
                 ))}
@@ -275,12 +299,20 @@ export function QuoteFormPage() {
               {values.product_id && (
                 <Box>
                   <Divider sx={{ mb: 2 }} />
-                  <Typography variant="h2" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+                  <Typography
+                    variant="h2"
+                    sx={{ fontSize: '1.1rem', fontWeight: 600 }}
+                  >
                     Questions
                   </Typography>
                   {questionsLoading && (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-                      <CircularProgress size={24} aria-label="Loading questions" />
+                    <Box
+                      sx={{ display: 'flex', justifyContent: 'center', py: 2 }}
+                    >
+                      <CircularProgress
+                        size={24}
+                        aria-label="Loading questions"
+                      />
                     </Box>
                   )}
                   {questions?.error && (
@@ -288,19 +320,27 @@ export function QuoteFormPage() {
                       Couldn't load questions: {questions.error}
                     </Alert>
                   )}
-                  {questions && !questions.error && questions.questions.length === 0 && (
-                    <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
-                      This product has no questions.
-                    </Typography>
-                  )}
+                  {questions &&
+                    !questions.error &&
+                    questions.questions.length === 0 && (
+                      <Typography
+                        variant="body2"
+                        sx={{ mt: 1, color: 'text.secondary' }}
+                      >
+                        This product has no questions.
+                      </Typography>
+                    )}
                   {questions && questions.questions.length > 0 && (
                     <Stack spacing={2} sx={{ mt: 1 }}>
                       {questions.questions.map((question) => {
                         const answer =
-                          questions.answers[question.question_id] ?? question.default_answer
+                          questions.answers[question.question_id] ??
+                          question.default_answer
                         return (
                           <FormControl key={question.question_id}>
-                            <FormLabel id={`question-${question.question_id}-label`}>
+                            <FormLabel
+                              id={`question-${question.question_id}-label`}
+                            >
                               {question.question_label}
                             </FormLabel>
                             <RadioGroup
@@ -308,7 +348,10 @@ export function QuoteFormPage() {
                               aria-labelledby={`question-${question.question_id}-label`}
                               value={answer}
                               onChange={(event) =>
-                                handleAnswerChange(question.question_id, event.target.value)
+                                handleAnswerChange(
+                                  question.question_id,
+                                  event.target.value,
+                                )
                               }
                             >
                               {answerOptions(question, answer).map((option) => (
@@ -328,7 +371,11 @@ export function QuoteFormPage() {
                 </Box>
               )}
 
-              <Stack direction="row" spacing={2} sx={{ justifyContent: 'flex-end' }}>
+              <Stack
+                direction="row"
+                spacing={2}
+                sx={{ justifyContent: 'flex-end' }}
+              >
                 <Button variant="outlined" onClick={() => navigate('/quotes')}>
                   Cancel
                 </Button>

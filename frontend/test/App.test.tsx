@@ -43,14 +43,18 @@ describe('App', () => {
   it('renders the Products page at /products', () => {
     renderAt('/products')
 
-    expect(screen.getByRole('heading', { name: 'Products' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Products' }),
+    ).toBeInTheDocument()
     expect(screen.getByTestId('products-data-grid-stub')).toBeInTheDocument()
   })
 
   it('renders the Questions page at /questions', () => {
     renderAt('/questions')
 
-    expect(screen.getByRole('heading', { name: 'Questions' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Questions' }),
+    ).toBeInTheDocument()
     expect(screen.getByTestId('questions-data-grid-stub')).toBeInTheDocument()
   })
 

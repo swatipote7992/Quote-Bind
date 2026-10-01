@@ -4,6 +4,10 @@ A FastAPI service for managing insurance product quotes: a product catalog, a
 question catalog, per-product question sets, and the quotes that tie an
 applicant to a product and its answered question set.
 
+The repo holds two projects: `backend/` (this API) and `frontend/` (React app,
+see `frontend/README.md`). Paths and commands below are relative to `backend/`
+unless stated otherwise.
+
 ## Tech stack
 
 - **Python** 3.13
@@ -362,8 +366,6 @@ diagnostics — not errors. Because of the startup cost, leave this env var
 unset for local development unless you're actively testing against a real
 Application Insights resource.
 
-```
-
 ## Advanced Features
 
 ### Product questions — `GET /products/{product_id}/questions`
@@ -422,6 +424,20 @@ includes both the default and the given answer per question:
 
 ```json
 { "question_id": 1, "question_label": "Are you 18 years old?", "default_answer": "Yes", "answer": "No" }
+```
+
+## Deployment
+
+Both projects are deployed to Azure and documented step by step:
+
+- Backend: Azure Container Apps, image built with `az acr build` — see
+  [backend/DEPLOYMENT.md](backend/DEPLOYMENT.md).
+- Frontend: Azure Static Web Apps, deployed from a local production build via
+  the SWA CLI — see [frontend/DEPLOYMENT.md](frontend/DEPLOYMENT.md).
+
+Deploy the backend first: the frontend build needs its URL, and the backend's
+CORS allow-list needs the frontend's hostname added afterwards. The two guides
+cross-reference each other at those points.
 
 ## Project structure
 
