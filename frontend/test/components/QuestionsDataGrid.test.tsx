@@ -1,13 +1,16 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { QuestionsDataGrid } from '../../src/components/QuestionsDataGrid'
-import { getQuestions } from '../../src/api/questions'
-import type { QuestionDto } from '../../src/types/question_model'
+import { getQuestionsPage } from '../../src/api/questions'
+import type {
+  QuestionDto,
+  QuestionPageDto,
+} from '../../src/types/question_model'
 
 jest.mock('../../src/api/questions', () => ({
-  getQuestions: jest.fn(),
+  getQuestionsPage: jest.fn(),
 }))
 
-const mockedGetQuestions = jest.mocked(getQuestions)
+const mockedGetQuestionsPage = jest.mocked(getQuestionsPage)
 
 const sampleQuestion: QuestionDto = {
   question_id: 1,
@@ -15,13 +18,17 @@ const sampleQuestion: QuestionDto = {
   default_answer: 'Yes',
 }
 
+function pageOf(data: QuestionDto[], total = data.length): QuestionPageDto {
+  return { data, page: 1, page_size: 10, total, total_pages: 1 }
+}
+
 describe('QuestionsDataGrid', () => {
   afterEach(() => {
-    mockedGetQuestions.mockReset()
+    mockedGetQuestionsPage.mockReset()
   })
 
   it('renders question rows once loaded', async () => {
-    mockedGetQuestions.mockResolvedValue([sampleQuestion])
+    mockedGetQuestionsPage.mockResolvedValue(pageOf([sampleQuestion]))
 
     render(<QuestionsDataGrid />)
 
@@ -29,17 +36,27 @@ describe('QuestionsDataGrid', () => {
     expect(screen.getByText('Yes')).toBeInTheDocument()
   })
 
-  it('renders an empty grid with no rows when there are no questions', async () => {
-    mockedGetQuestions.mockResolvedValue([])
+  it('requests the first page with the default page size', async () => {
+    mockedGetQuestionsPage.mockResolvedValue(pageOf([sampleQuestion]))
 
     render(<QuestionsDataGrid />)
 
-    await waitFor(() => expect(mockedGetQuestions).toHaveBeenCalledTimes(1))
+    await waitFor(() =>
+      expect(mockedGetQuestionsPage).toHaveBeenCalledWith(1, 10),
+    )
+  })
+
+  it('renders an empty grid with no rows when there are no questions', async () => {
+    mockedGetQuestionsPage.mockResolvedValue(pageOf([]))
+
+    render(<QuestionsDataGrid />)
+
+    await waitFor(() => expect(mockedGetQuestionsPage).toHaveBeenCalledTimes(1))
     expect(await screen.findByText('No rows')).toBeInTheDocument()
   })
 
   it('shows an error message when the request fails', async () => {
-    mockedGetQuestions.mockRejectedValue(new Error('Network down'))
+    mockedGetQuestionsPage.mockRejectedValue(new Error('Network down'))
 
     render(<QuestionsDataGrid />)
 
@@ -49,7 +66,7 @@ describe('QuestionsDataGrid', () => {
   })
 
   it('provides a quick-filter search box for filtering records', async () => {
-    mockedGetQuestions.mockResolvedValue([sampleQuestion])
+    mockedGetQuestionsPage.mockResolvedValue(pageOf([sampleQuestion]))
 
     render(<QuestionsDataGrid />)
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Alert, Box } from '@mui/material'
 import { DataGrid, GridToolbar, type GridColDef } from '@mui/x-data-grid'
-import { getQuestions } from '../api/questions'
+import { getQuestionsPage } from '../api/questions'
 import type { QuestionDto } from '../types/question_model'
 
 const columns: GridColDef<QuestionDto>[] = [
@@ -12,15 +12,24 @@ const columns: GridColDef<QuestionDto>[] = [
 
 export function QuestionsDataGrid() {
   const [questions, setQuestions] = useState<QuestionDto[]>([])
+  const [rowCount, setRowCount] = useState(0)
+  // DataGrid pages are 0-based; the backend's are 1-based.
+  const [paginationModel, setPaginationModel] = useState({
+    page: 0,
+    pageSize: 10,
+  })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
+    setLoading(true)
 
-    getQuestions()
-      .then((data) => {
-        if (!cancelled) setQuestions(data)
+    getQuestionsPage(paginationModel.page + 1, paginationModel.pageSize)
+      .then((result) => {
+        if (cancelled) return
+        setQuestions(result.data)
+        setRowCount(result.total)
       })
       .catch((err: unknown) => {
         if (!cancelled) {
@@ -36,7 +45,7 @@ export function QuestionsDataGrid() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [paginationModel])
 
   if (error) {
     return (
@@ -53,9 +62,10 @@ export function QuestionsDataGrid() {
         columns={columns}
         getRowId={(row) => row.question_id}
         loading={loading}
-        initialState={{
-          pagination: { paginationModel: { pageSize: 10 } },
-        }}
+        paginationMode="server"
+        rowCount={rowCount}
+        paginationModel={paginationModel}
+        onPaginationModelChange={setPaginationModel}
         pageSizeOptions={[10, 25, 50]}
         disableRowSelectionOnClick
         autoHeight

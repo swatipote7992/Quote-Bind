@@ -5,3 +5,11 @@ export interface QuestionDto {
   question_label: string
   default_answer: string
 }
+
+export interface QuestionPageDto {
+  data: QuestionDto[]
+  page: number
+  page_size: number
+  total: number
+  total_pages: number
+}
